@@ -26,17 +26,10 @@ def __codegen_detect(env):
     ajcg = env.WhereIs('ajcodegen.py', e['PATH'])
     if not ajcg:
         ajcg_root = env.Dir(env['AJREPOPATH'] + '/devtools/codegen').abspath
-        ajcg = ajcg_root + '/build/scripts-2.7/ajcodegen.py'
+        ajcg = ajcg_root + '/dist/bin/ajcodegen.py'
         if not os.path.isfile(ajcg):
             raise Exception('No code generator found, aborting!')
-        if os.path.isdir(ajcg_root + '/build/lib.linux-' + env['CPU'] + '-2.7'):
-            # for 64-bit
-            e['PYTHONPATH'] = ajcg_root + '/build/lib.linux-' + env['CPU'] + '-2.7'
-        elif os.path.isdir(ajcg_root + '/build/lib'):
-            # for 32-bit
-            e['PYTHONPATH'] = ajcg_root + '/build/lib'
-        else:
-            raise Exception('No code generator found, aborting!')
+        e['PYTHONPATH'] = ajcg_root + '/dist/lib/python'
     return ajcg, e
 
 def __codegen(target, source, env):
