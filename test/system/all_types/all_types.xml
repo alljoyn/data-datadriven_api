@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://www.allseenalliance.org/schemas/introspect_ext.xsd">
+  <interface name="org.allseenalliance.test.AllTypes">
+
+    <struct name="StructNested">
+      <field name="member_int32" type="i" />
+    </struct>
+    <dict name="DictionaryOfInt32">
+       <key type="i" />
+       <value type="i" />
+    </dict>
+
+    <struct name="StructWithAllTypes">
+      <field name="member_boolean" type="b" />
+      <field name="member_byte" type="y" />
+      <field name="member_int16" type="n" />
+      <field name="member_uint16" type="q" />
+      <field name="member_int32" type="i" />
+      <field name="member_uint32" type="u" />
+      <field name="member_int64" type="x" />
+      <field name="member_uint64" type="t" />
+      <field name="member_double" type="d" />
+      <field name="member_string" type="s" />
+      <field name="member_signature" type="g" />
+      <field name="member_objpath" type="o" />
+      <field name="member_struct" type="[StructNested]" />
+      <field name="member_array" type="ai" />
+      <field name="member_dict" type="[DictionaryOfInt32]" />
+    </struct>
+
+    <property name="prop_boolean" type="b" access="read" />
+    <property name="prop_byte" type="y" access="read" />
+    <property name="prop_int16" type="n" access="read" />
+    <property name="prop_uint16" type="q" access="read" />
+    <property name="prop_int32" type="i" access="read" />
+    <property name="prop_uint32" type="u" access="read" />
+    <property name="prop_int64" type="x" access="read" />
+    <property name="prop_uint64" type="t" access="read" />
+    <property name="prop_double" type="d" access="read" />
+    <property name="prop_string" type="s" access="read" />
+    <property name="prop_signature" type="g" access="read" />
+    <property name="prop_objpath" type="o" access="read" />
+    <property name="prop_struct" type="[StructWithAllTypes]" access="read" />
+    <property name="prop_array" type="ai" access="read" />
+    <property name="prop_dict" type="[DictionaryOfInt32]" access="read" />
+
+    <property name="prop_unnamed_struct" type="(b)" access="read" />
+    <property name="prop_array_of_unnamed_struct" type="a(b)" access="read" />
+    <property name="prop_unnamed_dict" type="a{bb}" access="read" />
+
+    <method name="MethodWithAllTypesInAndOut">
+      <arg name="arg_in_boolean" type="b" direction="in" />
+      <arg name="arg_in_byte" type="y" direction="in" />
+      <arg name="arg_in_int16" type="n" direction="in" />
+      <arg name="arg_in_uint16" type="q" direction="in" />
+      <arg name="arg_in_int32" type="i" direction="in" />
+      <arg name="arg_in_uint32" type="u" direction="in" />
+      <arg name="arg_in_int64" type="x" direction="in" />
+      <arg name="arg_in_uint64" type="t" direction="in" />
+      <arg name="arg_in_double" type="d" direction="in" />
+      <arg name="arg_in_string" type="s" direction="in" />
+      <arg name="arg_in_signature" type="g" direction="in" />
+      <arg name="arg_in_objpath" type="o" direction="in" />
+      <arg name="arg_in_struct" type="[StructWithAllTypes]" direction="in" />
+
+      <arg name="arg_out_boolean" type="b" direction="out" />
+      <arg name="arg_out_byte" type="y" direction="out" />
+      <arg name="arg_out_int16" type="n" direction="out" />
+      <arg name="arg_out_uint16" type="q" direction="out" />
+      <arg name="arg_out_int32" type="i" direction="out" />
+      <arg name="arg_out_uint32" type="u" direction="out" />
+      <arg name="arg_out_int64" type="x" direction="out" />
+      <arg name="arg_out_uint64" type="t" direction="out" />
+      <arg name="arg_out_double" type="d" direction="out" />
+      <arg name="arg_out_string" type="s" direction="out" />
+      <arg name="arg_out_signature" type="g" direction="out" />
+      <arg name="arg_out_objpath" type="o" direction="out" />
+      <arg name="arg_out_struct" type="[StructWithAllTypes]" direction="out" />
+    </method>
+    <method name="MethodWithoutOut">
+      <arg name="arg_in_boolean" type="b" direction="in" />
+    </method>
+    <method name="MethodWithoutIn">
+      <arg name="arg_out_boolean" type="b" direction="out" />
+    </method>
+
+    <signal name="SignalWithAllTypes">
+      <arg name="arg_boolean" type="b" />
+      <arg name="arg_byte" type="y" />
+      <arg name="arg_int16" type="n" />
+      <arg name="arg_uint16" type="q" />
+      <arg name="arg_int32" type="i" />
+      <arg name="arg_uint32" type="u" />
+      <arg name="arg_int64" type="x" />
+      <arg name="arg_uint64" type="t" />
+      <arg name="arg_double" type="d" />
+      <arg name="arg_string" type="s" />
+      <arg name="arg_signature" type="g" />
+      <arg name="arg_objpath" type="o" />
+      <arg name="arg_struct" type="[StructWithAllTypes]" />
+    </signal>
+    <signal name="SignalWithoutArgs" />
+  </interface>
+
+  <interface name="org.allseenalliance.test.AllArrays">
+    <struct name="StructNested">
+      <field name="member_int32" type="i" />
+    </struct>
+    <dict name="DictionaryOfInt32">
+       <key type="i" />
+       <value type="i" />
+    </dict>
+
+    <property name="prop_array_of_boolean" type="ab" access="read" />
+    <property name="prop_array_of_byte" type="ay" access="read" />
+    <property name="prop_array_of_int16" type="an" access="read" />
+    <property name="prop_array_of_uint16" type="aq" access="read" />
+    <property name="prop_array_of_int32" type="ai" access="read" />
+    <property name="prop_array_of_uint32" type="au" access="read" />
+    <property name="prop_array_of_int64" type="ax" access="read" />
+    <property name="prop_array_of_uint64" type="at" access="read" />
+    <property name="prop_array_of_double" type="ad" access="read" />
+    <property name="prop_array_of_string" type="as" access="read" />
+    <property name="prop_array_of_signature" type="ag" access="read" />
+    <property name="prop_array_of_objpath" type="ao" access="read" />
+    <property name="prop_array_of_struct" type="a[StructNested]" access="read" />
+    <property name="prop_array_of_array" type="aai" access="read" />
+    <property name="prop_array_of_dict" type="a[DictionaryOfInt32]" access="read" />
+
+    <method name="MethodWithAllArraysInAndOut">
+      <arg name="arg_in_boolean" type="ab" direction="in" />
+      <arg name="arg_in_byte" type="ay" direction="in" />
+      <arg name="arg_in_int16" type="an" direction="in" />
+      <arg name="arg_in_uint16" type="aq" direction="in" />
+      <arg name="arg_in_int32" type="ai" direction="in" />
+      <arg name="arg_in_uint32" type="au" direction="in" />
+      <arg name="arg_in_int64" type="ax" direction="in" />
+      <arg name="arg_in_uint64" type="at" direction="in" />
+      <arg name="arg_in_double" type="ad" direction="in" />
+      <arg name="arg_in_string" type="as" direction="in" />
+      <arg name="arg_in_signature" type="ag" direction="in" />
+      <arg name="arg_in_objpath" type="ao" direction="in" />
+      <arg name="arg_in_struct" type="a[StructNested]" direction="in" />
+      <arg name="arg_in_array" type="aai" direction="in" />
+      <arg name="arg_in_dict" type="a[DictionaryOfInt32]" direction="in" />
+
+      <arg name="arg_out_boolean" type="ab" direction="out" />
+      <arg name="arg_out_byte" type="ay" direction="out" />
+      <arg name="arg_out_int16" type="an" direction="out" />
+      <arg name="arg_out_uint16" type="aq" direction="out" />
+      <arg name="arg_out_int32" type="ai" direction="out" />
+      <arg name="arg_out_uint32" type="au" direction="out" />
+      <arg name="arg_out_int64" type="ax" direction="out" />
+      <arg name="arg_out_uint64" type="at" direction="out" />
+      <arg name="arg_out_double" type="ad" direction="out" />
+      <arg name="arg_out_string" type="as" direction="out" />
+      <arg name="arg_out_signature" type="ag" direction="out" />
+      <arg name="arg_out_objpath" type="ao" direction="out" />
+      <arg name="arg_out_struct" type="a[StructNested]" direction="out" />
+      <arg name="arg_out_array" type="aai" direction="out" />
+      <arg name="arg_out_dict" type="a[DictionaryOfInt32]" direction="out" />
+    </method>
+
+    <signal name="SignalWithAllArrays">
+      <arg name="arg_boolean" type="ab" />
+      <arg name="arg_byte" type="ay" />
+      <arg name="arg_int16" type="an" />
+      <arg name="arg_uint16" type="aq" />
+      <arg name="arg_int32" type="ai" />
+      <arg name="arg_uint32" type="au" />
+      <arg name="arg_int64" type="ax" />
+      <arg name="arg_uint64" type="at" />
+      <arg name="arg_double" type="ad" />
+      <arg name="arg_string" type="as" />
+      <arg name="arg_signature" type="ag" />
+      <arg name="arg_objpath" type="ao" />
+      <arg name="arg_struct" type="a[StructNested]" />
+      <arg name="arg_array" type="aai" />
+      <arg name="arg_dict" type="a[DictionaryOfInt32]" />
+    </signal>
+  </interface>
+
+  <interface name="org.allseenalliance.test.AllDictionaries">
+    <struct name="StructNested">
+      <field name="member_int32" type="i" />
+    </struct>
+
+    <dict name="DictionaryOfBoolean">
+       <key type="b" />
+       <value type="b" />
+    </dict>
+    <dict name="DictionaryOfByte">
+       <key type="y" />
+       <value type="y" />
+    </dict>
+    <dict name="DictionaryOfInt16">
+       <key type="n" />
+       <value type="n" />
+    </dict>
+    <dict name="DictionaryOfUnsignedInt16">
+       <key type="q" />
+       <value type="q" />
+    </dict>
+    <dict name="DictionaryOfInt32">
+       <key type="i" />
+       <value type="i" />
+    </dict>
+    <dict name="DictionaryOfUnsignedInt32">
+       <key type="u" />
+       <value type="u" />
+    </dict>
+    <dict name="DictionaryOfInt64">
+       <key type="x" />
+       <value type="x" />
+    </dict>
+    <dict name="DictionaryOfUnsignedInt64">
+       <key type="t" />
+       <value type="t" />
+    </dict>
+    <dict name="DictionaryOfDouble">
+       <key type="d" />
+       <value type="d" />
+    </dict>
+    <dict name="DictionaryOfString">
+       <key type="s" />
+       <value type="s" />
+    </dict>
+    <dict name="DictionaryOfSignature">
+       <key type="g" />
+       <value type="g" />
+    </dict>
+    <dict name="DictionaryOfObjPath">
+       <key type="o" />
+       <value type="o" />
+    </dict>
+    <dict name="DictionaryOfStruct">
+       <key type="i" />
+       <value type="[StructNested]" />
+    </dict>
+    <dict name="DictionaryOfArray">
+       <key type="i" />
+       <value type="ai" />
+    </dict>
+    <dict name="DictionaryOfDictionary">
+       <key type="i" />
+       <value type="[DictionaryOfInt32]" />
+    </dict>
+
+    <struct name="StructWithAllDictionaries">
+      <field name="member_dict_of_boolean" type="[DictionaryOfBoolean]" />
+      <field name="member_dict_of_byte" type="[DictionaryOfByte]" />
+      <field name="member_dict_of_int16" type="[DictionaryOfInt16]" />
+      <field name="member_dict_of_uint16" type="[DictionaryOfUnsignedInt16]" />
+      <field name="member_dict_of_int32" type="[DictionaryOfInt32]" />
+      <field name="member_dict_of_uint32" type="[DictionaryOfUnsignedInt32]" />
+      <field name="member_dict_of_int64" type="[DictionaryOfInt64]" />
+      <field name="member_dict_of_uint64" type="[DictionaryOfUnsignedInt64]" />
+      <field name="member_dict_of_double" type="[DictionaryOfDouble]" />
+      <field name="member_dict_of_string" type="[DictionaryOfString]" />
+      <field name="member_dict_of_signature" type="[DictionaryOfSignature]" />
+      <field name="member_dict_of_objpath" type="[DictionaryOfObjPath]" />
+      <field name="member_dict_of_struct" type="[DictionaryOfStruct]" />
+      <field name="member_dict_of_array" type="[DictionaryOfArray]" />
+      <field name="member_dict_of_dict" type="[DictionaryOfDictionary]" />
+    </struct>
+
+    <property name="prop_dict_of_boolean" type="[DictionaryOfBoolean]" access="read" />
+    <property name="prop_dict_of_byte" type="[DictionaryOfByte]" access="read" />
+    <property name="prop_dict_of_int16" type="[DictionaryOfInt16]" access="read" />
+    <property name="prop_dict_of_uint16" type="[DictionaryOfUnsignedInt16]" access="read" />
+    <property name="prop_dict_of_int32" type="[DictionaryOfInt32]" access="read" />
+    <property name="prop_dict_of_uint32" type="[DictionaryOfUnsignedInt32]" access="read" />
+    <property name="prop_dict_of_int64" type="[DictionaryOfInt64]" access="read" />
+    <property name="prop_dict_of_uint64" type="[DictionaryOfUnsignedInt64]" access="read" />
+    <property name="prop_dict_of_double" type="[DictionaryOfDouble]" access="read" />
+    <property name="prop_dict_of_string" type="[DictionaryOfString]" access="read" />
+    <property name="prop_dict_of_signature" type="[DictionaryOfSignature]" access="read" />
+    <property name="prop_dict_of_objpath" type="[DictionaryOfObjPath]" access="read" />
+    <property name="prop_dict_of_struct" type="[DictionaryOfStruct]" access="read" />
+    <property name="prop_dict_of_array" type="[DictionaryOfArray]" access="read" />
+    <property name="prop_dict_of_dict" type="[DictionaryOfDictionary]" access="read" />
+
+    <method name="MethodWithAllDictionariesInAndOut">
+      <arg name="arg_in_boolean" type="[DictionaryOfBoolean]" direction="in" />
+      <arg name="arg_in_byte" type="[DictionaryOfByte]" direction="in" />
+      <arg name="arg_in_int16" type="[DictionaryOfInt16]" direction="in" />
+      <arg name="arg_in_uint16" type="[DictionaryOfUnsignedInt16]" direction="in" />
+      <arg name="arg_in_int32" type="[DictionaryOfInt32]" direction="in" />
+      <arg name="arg_in_uint32" type="[DictionaryOfUnsignedInt32]" direction="in" />
+      <arg name="arg_in_int64" type="[DictionaryOfInt64]" direction="in" />
+      <arg name="arg_in_uint64" type="[DictionaryOfUnsignedInt64]" direction="in" />
+      <arg name="arg_in_double" type="[DictionaryOfDouble]" direction="in" />
+      <arg name="arg_in_string" type="[DictionaryOfString]" direction="in" />
+      <arg name="arg_in_signature" type="[DictionaryOfSignature]" direction="in" />
+      <arg name="arg_in_objpath" type="[DictionaryOfObjPath]" direction="in" />
+      <arg name="arg_in_struct" type="[DictionaryOfStruct]" direction="in" />
+      <arg name="arg_in_array" type="[DictionaryOfArray]" direction="in" />
+      <arg name="arg_in_dict" type="[DictionaryOfDictionary]" direction="in" />
+
+      <arg name="arg_out_boolean" type="[DictionaryOfBoolean]" direction="out" />
+      <arg name="arg_out_byte" type="[DictionaryOfByte]" direction="out" />
+      <arg name="arg_out_int16" type="[DictionaryOfInt16]" direction="out" />
+      <arg name="arg_out_uint16" type="[DictionaryOfUnsignedInt16]" direction="out" />
+      <arg name="arg_out_int32" type="[DictionaryOfInt32]" direction="out" />
+      <arg name="arg_out_uint32" type="[DictionaryOfUnsignedInt32]" direction="out" />
+      <arg name="arg_out_int64" type="[DictionaryOfInt64]" direction="out" />
+      <arg name="arg_out_uint64" type="[DictionaryOfUnsignedInt64]" direction="out" />
+      <arg name="arg_out_double" type="[DictionaryOfDouble]" direction="out" />
+      <arg name="arg_out_string" type="[DictionaryOfString]" direction="out" />
+      <arg name="arg_out_signature" type="[DictionaryOfSignature]" direction="out" />
+      <arg name="arg_out_objpath" type="[DictionaryOfObjPath]" direction="out" />
+      <arg name="arg_out_struct" type="[DictionaryOfStruct]" direction="out" />
+      <arg name="arg_out_array" type="[DictionaryOfArray]" direction="out" />
+      <arg name="arg_out_dict" type="[DictionaryOfDictionary]" direction="out" />
+    </method>
+
+    <signal name="SignalWithAllDictionaries">
+      <arg name="arg_boolean" type="[DictionaryOfBoolean]" />
+      <arg name="arg_byte" type="[DictionaryOfByte]" />
+      <arg name="arg_int16" type="[DictionaryOfInt16]" />
+      <arg name="arg_uint16" type="[DictionaryOfUnsignedInt16]" />
+      <arg name="arg_int32" type="[DictionaryOfInt32]" />
+      <arg name="arg_uint32" type="[DictionaryOfUnsignedInt32]" />
+      <arg name="arg_int64" type="[DictionaryOfInt64]" />
+      <arg name="arg_uint64" type="[DictionaryOfUnsignedInt64]" />
+      <arg name="arg_double" type="[DictionaryOfDouble]" />
+      <arg name="arg_string" type="[DictionaryOfString]" />
+      <arg name="arg_signature" type="[DictionaryOfSignature]" />
+      <arg name="arg_objpath" type="[DictionaryOfObjPath]" />
+      <arg name="arg_struct" type="[DictionaryOfStruct]" />
+      <arg name="arg_array" type="[DictionaryOfArray]" />
+      <arg name="arg_dict" type="[DictionaryOfDictionary]" />
+    </signal>
+  </interface>
+</node>

@@ -1,0 +1,84 @@
+# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+import os
+
+Import('env', 'ajroot', 'buildroot')
+
+if not os.environ.get('GTEST_DIR'):
+    print('GTEST_DIR not specified skipping ajdd unit test build')
+else:
+    env['GTEST_DIR'] = os.environ['GTEST_DIR']
+    gtest_env = env.Clone();
+    gtest_dir = gtest_env['GTEST_DIR'];
+
+    if gtest_dir == '/usr':
+        gtest_src_base = os.path.join(gtest_dir, 'src', 'gtest')
+    else:
+        gtest_src_base = gtest_dir
+
+    # we compile with no rtti and we are not using exceptions.
+    gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport
+    # that will cause the gTest code to not compile as expected at this time
+    gtest_env.Append(CPPPATH = [ gtest_src_base ])
+    if gtest_dir != '/usr':
+        gtest_env.Append(CPPPATH = [ gtest_env.Dir('$GTEST_DIR/include') ])
+
+    gtest_obj = gtest_env.StaticObject(target = 'gtest-all', source = [ '%s/src/gtest-all.cc' % gtest_src_base ])
+    gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
+
+    test_src = gtest_env.Glob('*.cc')
+
+    unittest_env = env.Clone()
+
+    if gtest_dir != '/usr':
+        unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
+
+    unittest_env.Append(CPPPATH = [ajroot + '/about/inc', '#src'])
+
+    #we compile with no rtti and we are not using exceptions.
+    unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+
+    #gtest library file is placed on folder above the the object files.
+
+    unittest_env.Append(LIBPATH = ['./'])
+    unittest_env.Prepend(LIBS = ['gtest'])
+
+    unittest_env.Append(LIBPATH = '#' + buildroot + '/lib')
+    unittest_env.Append(LIBS = ['ajdd'])
+
+    objs = [ unittest_env.Object(test_src) ]
+
+    # generate code
+    unittest_env.Append(CPPPATH = ['generated'])
+    generated = unittest_env.CodeGen('simpleTestObject')
+    generated += unittest_env.CodeGen('varTestObject')
+    
+    generated_src = filter(lambda f: not '.h' in f.name, generated)
+
+    objs += [ unittest_env.Object(generated_src) ]
+
+    unittest_prog = unittest_env.Program('ajctest', objs)
+    unittest_env.Install('$C_TESTDIR/bin', unittest_prog)
+
+    #install gtest utilities
+    unittest_env.Install('$C_TESTDIR/bin', Dir('test_report').srcnode())
+    
+    #Bundled router
+    if unittest_env['BR'] == 'on':
+         unittest_env.Append(LIBPATH = [ajroot + '/cpp/lib'])
+         brobj = unittest_env.File(ajroot + '/cpp/lib/BundledRouter.o')
+         unittest_env.Prepend(LIBS = [brobj, 'ajrouter'])

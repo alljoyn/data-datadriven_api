@@ -1,0 +1,40 @@
+# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Import('env', 'ajroot', 'buildroot')
+
+app_env = env.Clone()
+app_env.Append(CPPPATH = ['generated'])
+app_env.Append(LIBPATH = '#' + buildroot + '/lib')
+app_env.Append(LIBS = ['ajdd'])
+
+#Bundled router
+if app_env['BR'] == 'on':
+    app_env.Append(LIBPATH = [ajroot + '/cpp/lib'])
+    brobj = app_env.File(ajroot + '/cpp/lib/BundledRouter.o')
+    app_env.Prepend(LIBS = [brobj, 'ajrouter'])
+
+# generate code
+generated = app_env.CodeGen('door')
+generated_src = filter(lambda f: not '.h' in f.name, generated)
+generated_src_cons = filter(lambda f: not 'Interface' in f.name, generated_src)
+generated_src_prov = filter(lambda f: not 'Proxy' in f.name, generated_src)
+
+# build consumer app
+consumer = app_env.Program(target='door_consumer',
+                           source=['door_consumer.cc', generated_src_cons])
+
+# build provider app
+provider = app_env.Program(target='door_provider',
+                           source=['door_provider.cc', generated_src_prov])
