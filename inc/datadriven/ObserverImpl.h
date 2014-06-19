@@ -113,7 +113,6 @@ class ObserverImpl {
     QStatus status;
 
     std::weak_ptr<BusConnectionImpl> busConnectionImpl;
-    //BusConnection& busConnection;
     std::unique_ptr<ObserverCache> cache;
     std::unique_ptr<RegisteredTypeDescription> iface;
     std::unique_ptr<ConsumerInterfaceListener> observerListener;
