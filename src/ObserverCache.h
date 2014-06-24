@@ -29,6 +29,8 @@ class ObserverCache {
   public:
     class ObjectAllocator {
       public:
+        virtual ~ObjectAllocator() { }
+
         virtual ProxyInterface* Alloc(const ObjectId& objId) = 0;
     };
 
