@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 #include "BusConnectionImpl.h"
-#include "WriterCache.h"
+#include "ProviderCache.h"
 
 #include <qcc/Debug.h>
 #include <algorithm>
@@ -121,11 +121,12 @@ void BusConnectionImpl::RegisterTypeDescription(const RegisteredTypeDescription*
     }
 }
 
-WriterCache* BusConnectionImpl::GetWriterCache(const qcc::String& intfname)
+ProviderCache* BusConnectionImpl::GetProviderCache(const qcc::String& intfname)
 {
-    map<qcc::String, std::unique_ptr<WriterCache> >::iterator it = caches.find(intfname);
+    map<qcc::String, std::unique_ptr<ProviderCache> >::iterator it = caches.find(intfname);
     if (it == caches.end()) {
-        caches[intfname] = std::unique_ptr<WriterCache>(new WriterCache(*typedescs[intfname], providerSessionManager));
+        caches[intfname] =
+            std::unique_ptr<ProviderCache>(new ProviderCache(*typedescs[intfname], providerSessionManager));
     }
     return caches[intfname].get();
 }
@@ -315,7 +316,7 @@ void BusConnectionImpl::RemoveProvidedObject(ProvidedObject* object)
         std::vector<const ProvidedInterface*>::iterator it_end = object->interfaces.end();
         for (; it != it_end; ++it) {
             ProvidedInterface* intf = const_cast<ProvidedInterface*>(*it);
-            WriterCache* cache = GetWriterCache(intf->GetTypeDescription()->GetName());
+            ProviderCache* cache = GetProviderCache(intf->GetTypeDescription()->GetName());
             if (NULL != cache) {
                 cache->Remove(object);
             } else {

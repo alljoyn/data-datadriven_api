@@ -17,7 +17,7 @@
 #include "InterestReceiver.h"
 #include "ProviderSessionManagerImpl.h"
 #include "BusConnectionImpl.h"
-#include "WriterCache.h"
+#include "ProviderCache.h"
 #include <qcc/String.h>
 #include <qcc/Debug.h>
 
@@ -105,21 +105,21 @@ void InterestReceiver::RegisterInterestMethodCallImpl(const ajn::InterfaceDescri
     }
 
     /* For each object matching this interface, we need to Signal() the update */
-    WriterCache* cache = providerSessionManagerImpl->busConnectionImpl->GetWriterCache(intfName);
+    ProviderCache* cache = providerSessionManagerImpl->busConnectionImpl->GetProviderCache(intfName);
     providerSessionManagerImpl->mutex.Unlock(__func__, __LINE__);
 
     if (NULL == cache) {
-        QCC_LogError(errorStatus, ("Writer cache not properly initialized"));
+        QCC_LogError(errorStatus, ("Provider cache not properly initialized"));
 
         return;
     }
 
-    WriterCache::Cache contents = cache->GetAll();
-    WriterCache::Cache::iterator cit = contents.begin();
-    WriterCache::Cache::iterator endcit = contents.end();
+    ProviderCache::Cache contents = cache->GetAll();
+    ProviderCache::Cache::iterator cit = contents.begin();
+    ProviderCache::Cache::iterator endcit = contents.end();
     for (; cit != endcit; ++cit) {
         ProvidedObject* const& obj = cit->first;
-        WriterCache::Properties& args = cit->second;
+        ProviderCache::Properties& args = cit->second;
         obj->Signal(NULL, sessionId, *cache->GetPropUpdateSignalMember(),
                     &args[0], args.size(), 0, ajn::ALLJOYN_FLAG_GLOBAL_BROADCAST);
     }

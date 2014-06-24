@@ -20,7 +20,7 @@
 #include <alljoyn/about/AboutServiceApi.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
 #include <qcc/GUID.h>
-#include "WriterCache.h"
+#include "ProviderCache.h"
 #include "BusConnectionImpl.h"
 #include "InterestReceiver.h"
 

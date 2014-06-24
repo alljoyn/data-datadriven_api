@@ -28,7 +28,7 @@
 #define QCC_MODULE "DD_COMMON"
 
 namespace datadriven {
-class WriterCache;
+class ProviderCache;
 class RegisteredTypeDescription;
 class ProvidedObject;
 
@@ -43,8 +43,8 @@ class BusConnectionImpl :
 
     ProviderSessionManager& GetProviderSessionManager();
 
-    // TODO This is writer specific
-    WriterCache* GetWriterCache(const qcc::String& intfname);
+    // TODO This is provider specific
+    ProviderCache* GetProviderCache(const qcc::String& intfname);
 
     void RegisterTypeDescription(const RegisteredTypeDescription* typedesc);
 
@@ -88,7 +88,7 @@ class BusConnectionImpl :
     QStatus status;
     ConsumerSessionManager consumerSessionManager;
     ProviderSessionManager providerSessionManager;
-    std::map<qcc::String, std::unique_ptr<WriterCache> > caches;
+    std::map<qcc::String, std::unique_ptr<ProviderCache> > caches;
     std::map<qcc::String, const RegisteredTypeDescription*> typedescs;
 
     mutable qcc::Mutex observersMutex;

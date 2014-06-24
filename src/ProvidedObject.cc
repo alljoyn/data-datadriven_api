@@ -18,7 +18,7 @@
 #include <datadriven/BusConnection.h>
 #include "BusConnectionImpl.h"
 #include <qcc/GUID.h>
-#include "WriterCache.h"
+#include "ProviderCache.h"
 #include "ProviderSessionManager.h"
 
 #include <qcc/Debug.h>

@@ -19,7 +19,7 @@
 #include <datadriven/ProvidedInterface.h>
 #include <datadriven/RegisteredTypeDescription.h>
 #include <datadriven/ProvidedObject.h>
-#include "WriterCache.h"
+#include "ProviderCache.h"
 #include "BusConnectionImpl.h"
 
 #include <qcc/Debug.h>
@@ -60,7 +60,7 @@ QStatus ProvidedInterface::Update()
                      ("Cannot signal property updates for an object that is not exposed on the bus"));
         return ER_FAIL;
     }
-    WriterCache::Properties args = MarshalProperties();
+    ProviderCache::Properties args = MarshalProperties();
 
     if (ER_OK != status) {
         return status;
@@ -69,7 +69,7 @@ QStatus ProvidedInterface::Update()
     std::shared_ptr<BusConnectionImpl> busConn = providedObject.GetBusConnection().lock();
 
     if (busConn) {
-        WriterCache* cache = busConn->GetWriterCache(desc.GetName());
+        ProviderCache* cache = busConn->GetProviderCache(desc.GetName());
 
         if (NULL != cache) {
             status = cache->Update(&providedObject, args);

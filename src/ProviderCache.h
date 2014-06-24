@@ -14,8 +14,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef WRITERCACHE_H_
-#define WRITERCACHE_H_
+#ifndef PROVIDERCACHE_H_
+#define PROVIDERCACHE_H_
 
 #include <map>
 #include <vector>
@@ -29,13 +29,13 @@
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 namespace datadriven {
-class WriterCache {
+class ProviderCache {
   public:
     typedef std::vector<ajn::MsgArg> Properties;
     typedef std::map<ProvidedObject*, Properties> Cache;
 
-    WriterCache(const RegisteredTypeDescription& itd,
-                ProviderSessionManager& sm);
+    ProviderCache(const RegisteredTypeDescription& itd,
+                  ProviderSessionManager& sm);
 
     /********** SessionManager-facing API **********/
     size_t GetElementCount() const;

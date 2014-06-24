@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "WriterCache.h"
+#include "ProviderCache.h"
 #include <qcc/Mutex.h>
 
 #include <map>
@@ -26,14 +26,14 @@ using namespace ajn;
 using namespace datadriven;
 using namespace std;
 
-WriterCache::WriterCache(const RegisteredTypeDescription& td,
-                         ProviderSessionManager& psm) :
+ProviderCache::ProviderCache(const RegisteredTypeDescription& td,
+                             ProviderSessionManager& psm) :
     typedesc(td), providersessionmanager(psm)
 {
     interface = typedesc.GetDescription().GetName();
 }
 
-size_t WriterCache::GetElementCount() const
+size_t ProviderCache::GetElementCount() const
 {
     mutex.Lock();
     size_t size = cache.size();
@@ -41,7 +41,7 @@ size_t WriterCache::GetElementCount() const
     return size;
 }
 
-WriterCache::Cache WriterCache::GetAll()
+ProviderCache::Cache ProviderCache::GetAll()
 {
     //TODO this is horribly inefficient: it copies the complete cache
     //     I chose this approach for now because it radically simplifies
@@ -52,7 +52,7 @@ WriterCache::Cache WriterCache::GetAll()
     return copy;
 }
 
-const InterfaceDescription::Member* WriterCache::GetPropUpdateSignalMember() const
+const InterfaceDescription::Member* ProviderCache::GetPropUpdateSignalMember() const
 {
     mutex.Lock();
     /* the properties update signal is always member 0 */
@@ -61,7 +61,7 @@ const InterfaceDescription::Member* WriterCache::GetPropUpdateSignalMember() con
     return sigmember;
 }
 
-QStatus WriterCache::Update(ProvidedObject* obj, const Properties& prop)
+QStatus ProviderCache::Update(ProvidedObject* obj, const Properties& prop)
 {
     mutex.Lock();
     QStatus status = ER_OK;
@@ -72,7 +72,7 @@ QStatus WriterCache::Update(ProvidedObject* obj, const Properties& prop)
     return status;
 }
 
-void WriterCache::Remove(ProvidedObject* obj)
+void ProviderCache::Remove(ProvidedObject* obj)
 {
     mutex.Lock();
     cache.erase(obj);
