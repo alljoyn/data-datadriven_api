@@ -12,17 +12,17 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Import('env', 'ajroot', 'buildroot')
+Import('ddenv')
 
-app_env = env.Clone()
+app_env = ddenv.Clone()
 app_env.Append(CPPPATH = ['generated'])
-app_env.Append(LIBPATH = '#' + buildroot + '/lib')
-app_env.Append(LIBS = ['ajdd'])
+app_env.Append(LIBPATH =  '$DD_DISTDIR/lib')
+app_env.Prepend(LIBS = ['ajdd'])
 
 #Bundled router
 if app_env['BR'] == 'on':
-    app_env.Append(LIBPATH = [ajroot + '/cpp/lib'])
-    brobj = app_env.File(ajroot + '/cpp/lib/BundledRouter.o')
+    app_env.Append(LIBPATH = ['$DISTDIR' + '/cpp/lib'])
+    brobj = app_env.File('$DISTDIR' + '/cpp/lib/BundledRouter.o')
     app_env.Prepend(LIBS = [brobj, 'ajrouter'])
 
 # generate code
@@ -32,3 +32,5 @@ generated_src = filter(lambda f: not '.h' in f.name, generated)
 # build app
 chatapp = app_env.Program(target='chat',
                            source=['chat.cc', generated_src])
+
+Return('chatapp')

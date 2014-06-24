@@ -25,7 +25,7 @@ def __codegen_detect(env):
     e = os.environ.copy()
     ajcg = env.WhereIs('ajcodegen.py', e['PATH'])
     if not ajcg:
-        ajcg_root = env.Dir(env['AJREPOPATH'] + '/devtools/codegen').abspath
+        ajcg_root = env.Dir('../../devtools/codegen').abspath
         ajcg = ajcg_root + '/dist/bin/ajcodegen.py'
         if not os.path.isfile(ajcg):
             raise Exception('No code generator found, aborting!')

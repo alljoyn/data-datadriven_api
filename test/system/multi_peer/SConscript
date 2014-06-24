@@ -12,18 +12,12 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Import('env', 'ajroot', 'buildroot')
+Import('ddenv')
 
-app_env = env.Clone()
+app_env = ddenv.Clone()
 app_env.Append(CPPPATH = ['generated'])
-app_env.Append(LIBPATH = '#' + buildroot + '/lib')
-app_env.Append(LIBS = ['ajdd'])
-
-#Bundled router
-if app_env['BR'] == 'on':
-    app_env.Append(LIBPATH = [ajroot + '/cpp/lib'])
-    brobj = app_env.File(ajroot + '/cpp/lib/BundledRouter.o')
-    app_env.Prepend(LIBS = [brobj, 'ajrouter'])
+app_env.Append(LIBPATH =  '$DD_DISTDIR/lib')
+app_env.Prepend(LIBS = ['ajdd'])
 
 # generate code
 generated = app_env.CodeGen('multipeer')

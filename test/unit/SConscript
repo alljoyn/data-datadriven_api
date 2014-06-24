@@ -15,13 +15,13 @@
 
 import os
 
-Import('env', 'ajroot', 'buildroot')
+Import('ddenv')
 
 if not os.environ.get('GTEST_DIR'):
     print('GTEST_DIR not specified skipping ajdd unit test build')
 else:
-    env['GTEST_DIR'] = os.environ['GTEST_DIR']
-    gtest_env = env.Clone();
+    ddenv['GTEST_DIR'] = os.environ['GTEST_DIR']
+    gtest_env = ddenv.Clone();
     gtest_dir = gtest_env['GTEST_DIR'];
 
     if gtest_dir == '/usr':
@@ -42,28 +42,28 @@ else:
 
     test_src = gtest_env.Glob('*.cc')
 
-    unittest_env = env.Clone()
+    unittest_env = ddenv.Clone()
 
     if gtest_dir != '/usr':
         unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
 
-    unittest_env.Append(CPPPATH = [ajroot + '/about/inc', '#src'])
 
     #we compile with no rtti and we are not using exceptions.
     unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
 
     #gtest library file is placed on folder above the the object files.
 
+    unittest_env.Append(LIBPATH =  '$DD_DISTDIR/lib')
     unittest_env.Append(LIBPATH = ['./'])
     unittest_env.Prepend(LIBS = ['gtest'])
-
-    unittest_env.Append(LIBPATH = '#' + buildroot + '/lib')
-    unittest_env.Append(LIBS = ['ajdd'])
+    unittest_env.Prepend(LIBS = ['ajdd'])
 
     objs = [ unittest_env.Object(test_src) ]
 
-    # generate code
+    unittest_env.Append(CPPPATH = ['#/../../data/datadriven_api/src'])
     unittest_env.Append(CPPPATH = ['generated'])
+
+    # generate code
     generated = unittest_env.CodeGen('simpleTestObject')
     generated += unittest_env.CodeGen('varTestObject')
     
@@ -72,13 +72,9 @@ else:
     objs += [ unittest_env.Object(generated_src) ]
 
     unittest_prog = unittest_env.Program('ajctest', objs)
-    unittest_env.Install('$C_TESTDIR/bin', unittest_prog)
+    Return('unittest_prog')
+    #unittest_env.Install('$C_TESTDIR/bin', unittest_prog)
 
     #install gtest utilities
-    unittest_env.Install('$C_TESTDIR/bin', Dir('test_report').srcnode())
-    
-    #Bundled router
-    if unittest_env['BR'] == 'on':
-         unittest_env.Append(LIBPATH = [ajroot + '/cpp/lib'])
-         brobj = unittest_env.File(ajroot + '/cpp/lib/BundledRouter.o')
-         unittest_env.Prepend(LIBS = [brobj, 'ajrouter'])
+    #unittest_env.Install('$C_TESTDIR/bin', Dir('test_report').srcnode())
+

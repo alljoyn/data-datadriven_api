@@ -58,8 +58,8 @@ More information
 
 How to run the samples
 ======================
-As with any AllJoyn-based application, you need to run the AllJoyn routing
-daemon alongside the sample applications.
+The samples have been compiled with the router builtin. Therefore, there is no
+need to start the AllJoyn routing daemon.
 
 DDAPI applications depend on `libajdd.so`, which in turn depends on
 `liballjoyn.so`, `liballjoyn_about.so` and `liballjoyn_services_common.so`.
@@ -107,6 +107,7 @@ To build your own Linux application with the DDAPI, you must pass two AllJoyn-re
 * `QCC_OS_LINUX`
 * `QCC_OS_GROUP_POSIX`
 
+All files pertaining to the datadriven_api are found in the datadriven directory.
 Regarding header dependencies, you should include the individual directories
 found under cpp/inc in your compilation directive.
 

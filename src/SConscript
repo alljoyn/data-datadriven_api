@@ -12,11 +12,24 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Import('env', 'ajroot')
+Import('ddenv')
 
-lib_env = env.Clone()
-lib_env.Append(CPPPATH = [ajroot + '/about/inc', '.'])
+lib_env = ddenv.Clone()
 
-src = Glob('*.cc')
+srcs = Glob('*.cc')
 
-lib_env.SharedLibrary(target='ajdd', source=src)
+libs = []
+
+# Header files
+lib_env.Append(CPPPATH = ['.'])
+
+# Static library
+objs = lib_env.Object(srcs)
+libs.append(lib_env.StaticLibrary('ajdd', objs))
+
+# Shared library
+if lib_env.get('LIBTYPE', 'static') != 'static':
+    shobjs = lib_env.SharedObject(srcs)
+    libs.append(lib_env.SharedLibrary('ajdd', shobjs))
+
+Return ('libs')
