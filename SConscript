@@ -21,6 +21,12 @@ Import('env')
 # Indicate that this SConscript file has been loaded already
 env['_DATADRIVEN_'] = True
 
+#workaround for the fact you cannot build alljoyn with clang for now:
+#simply build alljoyn with default compiler and datadriven with clang
+if env['CXX'][:5] == 'clang':
+    TMP_CXX=env['CXX']
+    env['CXX']=DefaultEnvironment()['CXX']
+
 if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../core/alljoyn/services/about/SConscript'):
     env.SConscript('../../core/alljoyn/services/about/SConscript')
 
@@ -29,6 +35,11 @@ if not env.has_key('_ALLJOYN_SERVICES_COMMON_') and os.path.exists('../../servic
 
 if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
     env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
+
+if 'TMP_CXX' in locals():
+    env['CXX']=TMP_CXX
+    #clang cannot always deal with gnu++0x
+    env.Append(CXXFLAGS = '-D__STRICT_ANSI__') 
 
 # Make config library and header file paths available to the global environment
 env.Append(LIBPATH = '$DISTDIR/datadriven/lib');
