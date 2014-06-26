@@ -64,7 +64,7 @@ echo "[[ Running unit tests ]]"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 "${TEST_ROOT}"/ajctest --gtest_list_tests | awk -f "${DIR}/parse_list_tests.awk" | while read line
 do
-    "${TEST_ROOT}"/ajctest --gtest_filter=$line || exit 1
+    "${TEST_ROOT}"/ajctest --gtest_filter=$line --gtest_output=xml:/tmp/gtestresults/ || exit 1
 done
 
 # running system tests
