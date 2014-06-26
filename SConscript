@@ -57,8 +57,6 @@ AddMethod(ddenv, create_libpath, "CreateLibPath")
 
 # Make alljoyn C++ dist a sub-directory of the alljoyn dist.
 ddenv['DD_DISTDIR'] = env['DISTDIR'] + '/datadriven'
-#ddenv['DD_TESTDIR'] = env['TESTDIR'] + '/datadriven'
-ddenv['DD_TESTDIR'] = '/tmp'
 
 ddenv.Append(LIBS = ['alljoyn_about', 'alljoyn_services_common'])
 
