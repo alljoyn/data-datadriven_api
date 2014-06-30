@@ -60,11 +60,13 @@ fi
 
 # running unit tests
 # we are doing some magic here to run each test in its own process as we still have some issues to run them in one go (AS-207)
+echo "[[ Cleaning old Gtest results if any ]]"
+rm -rf "${TEST_ROOT}"/gtestresults/
 echo "[[ Running unit tests ]]"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 "${TEST_ROOT}"/ajctest --gtest_list_tests | awk -f "${DIR}/parse_list_tests.awk" | while read line
 do
-    "${TEST_ROOT}"/ajctest --gtest_filter=$line || exit 1
+    "${TEST_ROOT}"/ajctest --gtest_filter=$line --gtest_output=xml:"${TEST_ROOT}"/gtestresults/ || exit 1
 done
 
 # running system tests
