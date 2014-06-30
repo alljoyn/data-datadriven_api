@@ -79,24 +79,26 @@ for systest in Glob('test/system/*', strings=True):
 # Unit test building (are not installed)
 ddenv.SConscript('test/unit/SConscript', exports=['ddenv'], variant_dir=buildroot+'/test/unit', duplicate=0)
 
-# Whitespace policy
-if ddenv['WS'] != 'off' and not ddenv.GetOption('clean'):
-    import whitespace
-    import time
-
-    def wsbuild(target, source, env):
-        print "Evaluating whitespace compliance..."
-        curdir = os.path.abspath(os.path.dirname(wsbuild.func_code.co_filename))
-        config = os.path.join(curdir, 'tools', 'ajuncrustify.cfg')
-        print "Config:", config
-        print "Note: enter 'scons -h' to see whitespace (WS) options"
-        olddir = os.getcwd()
-        os.chdir(curdir) #We only want to run uncrustify on datadriven_api
-        time.sleep(1) #very dirty hack to prevent concurrent running of uncrustify
-        retval = whitespace.main([env['WS'], config])
-        os.chdir(olddir)
-        return retval
-
-    ddenv.Command('#/ws_dd', Dir('$DD_DISTDIR'), wsbuild)
-if ddenv['WS'] != 'off':
-    ddenv.Clean(ddenv.File('SConscript'), ddenv.File('#/whitespace.db'))
+# Whitespace policy (only when we don't build from alljoyn)
+if not env.has_key('_ALLJOYNCORE_'):
+    if ddenv['WS'] != 'off' and not ddenv.GetOption('clean'):
+        import whitespace
+        import time
+    
+        def wsbuild(target, source, env):
+            print "Evaluating whitespace compliance..."
+            curdir = os.path.abspath(os.path.dirname(wsbuild.func_code.co_filename))
+            config = os.path.join(curdir, 'tools', 'ajuncrustify.cfg')
+            print "Config:", config
+            print "Note: enter 'scons -h' to see whitespace (WS) options"
+            olddir = os.getcwd()
+            os.chdir(curdir) #We only want to run uncrustify on datadriven_api
+            time.sleep(1) #very dirty hack to prevent concurrent running of uncrustify
+            retval = whitespace.main([env['WS'], config])
+            os.chdir(olddir)
+            return retval
+    
+        ddenv.Command('#/ws_dd', Dir('$DD_DISTDIR'), wsbuild)
+    if ddenv['WS'] != 'off':
+        ddenv.Clean(ddenv.File('SConscript'), ddenv.File('#/whitespace.db'))
+    
