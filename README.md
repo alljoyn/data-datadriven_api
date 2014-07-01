@@ -71,7 +71,7 @@ You'll need to include the location where you installed these libraries in the
 
 There are currently two sample applications to illustrate the use of the DDAPI:
 
-* a simple chat application (in `samples/chat`)
+* a simple chat application (in `samples/ddchat`)
 * a toy home security system simulation (in `samples/door`).
 
 Building your own applications with the DDAPI

@@ -14,7 +14,7 @@ libraries. See the top-level `README.md` file in this distribution for details.
 
 To join the chat conversation, simply run
 
-    $ ./chat [<name>]
+    $ ./ddchat [<name>]
 
 If you do not provide a name, a random name will be generated for you.
 
@@ -31,7 +31,7 @@ If you do not provide a name, a random name will be generated for you.
 
 ### Data Model
 
-The data model, defined in `chat.xml`, is straightforward. There is a single
+The data model, defined in `ddchat.xml`, is straightforward. There is a single
 interface `org.allseenalliance.sample.ChatParticipant` that represents a
 participant in the conversation. A participant has a single observable
 property, the name. In addition, participants can say something (obviously),
