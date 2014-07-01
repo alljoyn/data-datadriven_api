@@ -17,6 +17,9 @@ sys.path.append('tools')
 import codegen
 
 Import('env')
+if 'cpp' not in env['bindings']:    
+    print('Not building datadriven_api because cpp was not specified in bindings')
+    Return()
 
 # Indicate that this SConscript file has been loaded already
 env['_DATADRIVEN_'] = True
