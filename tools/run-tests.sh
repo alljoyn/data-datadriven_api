@@ -80,7 +80,7 @@ if [ ! -z "$(which lcov)" ]; then
     if [ $(lcov --version | cut -d'.' -f2) -ge 10 ]; then
         COVDIR=${AJN_DD_PATH}/build/coverage
         mkdir -p ${COVDIR} > /dev/null 2>&1
-        lcov --quiet --capture --base-directory ${AJN_DD_PATH} --directory ${PLATFORM_ROOT} --directory ${AJN_DD_PATH}/inc/ --directory ${AJN_DD_PATH}/src/ --no-external --output-file ${COVDIR}/ddapi.info
+        lcov --quiet --capture --base-directory ${AJN_DD_PATH}/src --directory ${PLATFORM_ROOT}/lib --no-external --output-file ${COVDIR}/ddapi.info
         genhtml --quiet --output-directory ${COVDIR} ${COVDIR}/ddapi.info
     fi
 fi
