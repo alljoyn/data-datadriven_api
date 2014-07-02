@@ -21,14 +21,18 @@ if 'cpp' not in env['bindings']:
     print('Not building datadriven_api because cpp was not specified in bindings')
     Return()
 
+if env.has_key('_ALLJOYNCORE_'):
+    from_alljoyn_core=1
+else:
+    from_alljoyn_core=0
+
+
 # Indicate that this SConscript file has been loaded already
 env['_DATADRIVEN_'] = True
 
-#workaround for the fact you cannot build alljoyn with clang for now:
-#simply build alljoyn with default compiler and datadriven with clang
 if env['CXX'][:5] == 'clang':
-    TMP_CXX=env['CXX']
-    env['CXX']=DefaultEnvironment()['CXX']
+    #clang cannot always deal with gnu++0x
+    env.Append(CXXFLAGS = '-D__STRICT_ANSI__') 
 
 if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../core/alljoyn/services/about/SConscript'):
     env.SConscript('../../core/alljoyn/services/about/SConscript')
@@ -39,10 +43,6 @@ if not env.has_key('_ALLJOYN_SERVICES_COMMON_') and os.path.exists('../../servic
 if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
     env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
 
-if 'TMP_CXX' in locals():
-    env['CXX']=TMP_CXX
-    #clang cannot always deal with gnu++0x
-    env.Append(CXXFLAGS = '-D__STRICT_ANSI__') 
 
 # Make config library and header file paths available to the global environment
 env.Append(LIBPATH = '$DISTDIR/datadriven/lib');
@@ -70,20 +70,24 @@ ddenv.Install('$DD_DISTDIR/inc/datadriven', ddenv.Glob('inc/datadriven/*.h'))
 ddenv.Append(CPPPATH = ['$DD_DISTDIR/inc/'])
 ddenv.Install('$DD_DISTDIR/lib', ddenv.SConscript('src/SConscript', exports = ['ddenv'], variant_dir=buildroot+'/lib', duplicate=0))
 
-# Sample building
-for sample in Glob('samples/*', strings=True):
-    ddenv.Install('$DD_DISTDIR/bin', ddenv.SConscript(sample + '/SConscript', exports=['ddenv'], variant_dir=buildroot+'/sample/'+sample, duplicate=0))
+# Remove this condition when codegen supports ddcpp
+if from_alljoyn_core == 0:
+    # Sample building
+    for sample in Glob('samples/*', strings=True):
+        ddenv.Install('$DD_DISTDIR/bin/samples', ddenv.SConscript(sample + '/SConscript', exports=['ddenv'], variant_dir=buildroot+'/sample/'+sample, duplicate=0))
+    
+    # System test building (are not installed)
+    for systest in Glob('test/system/*', strings=True):
+        testdir = buildroot+'/'+systest
+        ddenv.SConscript(systest + '/SConscript', exports=['ddenv'], variant_dir=testdir, duplicate=0)
 
-# System test building (are not installed)
-for systest in Glob('test/system/*', strings=True):
-    testdir = buildroot+'/'+systest
-    ddenv.SConscript(systest + '/SConscript', exports=['ddenv'], variant_dir=testdir, duplicate=0)
-
-# Unit test building (are not installed)
-ddenv.SConscript('test/unit/SConscript', exports=['ddenv'], variant_dir=buildroot+'/test/unit', duplicate=0)
+    # Unit test building (are not installed)
+    ddenv.SConscript('test/unit/SConscript', exports=['ddenv'], variant_dir=buildroot+'/test/unit', duplicate=0)
+else:
+    print 'Not building datadriven_api samples due to codegen incompatibility'
 
 # Whitespace policy (only when we don't build from alljoyn)
-if not env.has_key('_ALLJOYNCORE_'):
+if from_alljoyn_core == 0:
     if ddenv['WS'] != 'off' and not ddenv.GetOption('clean'):
         import whitespace
         import time
