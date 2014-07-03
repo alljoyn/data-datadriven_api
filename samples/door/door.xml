@@ -16,14 +16,21 @@ Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 -->
 <node>
   <interface name="org.allseenalliance.sample.Door">
-    <property name="open" type="b" access="read" />
-    <property name="location" type="s" access="read" />
+    <property name="open" type="b" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="location" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="code" type="u" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="invalidates"/>
+    </property>
 
-    <method name="Open">
-      <arg name="success" type="b" direction="out"/>
-    </method>
-    <method name="Close">
-      <arg name="success" type="b" direction="out"/>
+    <method name="Open"/>
+    <method name="Close"/>
+    <method name="KnockAndRun">
+        <!-- to demonstrate the use of fire-and-forget methods -->
+        <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
     </method>
     <signal name="PersonPassedThrough">
       <arg name="who" type="s"/>

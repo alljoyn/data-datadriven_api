@@ -16,7 +16,9 @@ Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 -->
 <node>
   <interface name="org.allseenalliance.sample.ChatParticipant">
-    <property name="name" type="s" access="read"></property>
+    <property name="name" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <signal name="Message">
       <arg name="message" type="s"/>
     </signal>

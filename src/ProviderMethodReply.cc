@@ -15,13 +15,13 @@
  ******************************************************************************/
 
 #include <datadriven/ProviderMethodReply.h>
-#include <datadriven/ProvidedObject.h>
+#include "ProvidedObjectImpl.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 
 namespace datadriven {
-ProviderMethodReply::ProviderMethodReply(ProvidedObject& providedObject,
+ProviderMethodReply::ProviderMethodReply(std::shared_ptr<ProvidedObjectImpl> providedObject,
                                          ajn::Message& message) :
     providedObject(providedObject), message(message)
 {
@@ -33,11 +33,31 @@ ProviderMethodReply::~ProviderMethodReply()
 
 QStatus ProviderMethodReply::MethodReply(const ajn::MsgArg* args, size_t numArgs)
 {
-    QStatus status = providedObject.MethodReply(message, args, numArgs);
+    QStatus status = providedObject->MethodReply(message, args, numArgs);
 
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to send method reply"));
     }
     return status;
+}
+
+QStatus ProviderMethodReply::SendError(const qcc::String& error, const qcc::String& errorMessage)
+{
+    QStatus status = providedObject->MethodReplyError(message, error.c_str(), errorMessage.c_str());
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to send method error reply"));
+    }
+    return status;
+}
+
+QStatus ProviderMethodReply::SendErrorCode(QStatus status)
+{
+    QStatus stat = providedObject->MethodReplyErrorCode(message, status);
+
+    if (ER_OK != stat) {
+        QCC_LogError(stat, ("Failed to send method error reply"));
+    }
+    return stat;
 }
 }

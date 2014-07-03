@@ -1,4 +1,4 @@
-# The Data-driven API Tutorial
+# The data-driven API tutorial
 This document provides a brief introduction on how to develop a distributed
 application with the Data-Driven API (DDAPI) for AllJoyn. No prior knowledge of
 the standard AllJoyn API is required. A basic proficiency with the C++ language
@@ -43,7 +43,7 @@ An AllJoyn Interface consists of the following parts:
   object-oriented programming language: they represent the observable state of
   the object implementing the interface. A Property has a name and a type.
   Types can be primitive (signed and unsigned integers, strings, boolean
-  values, ...) or complex (arrays, structures, dictionaries).  
+  values, ...) or complex (arrays, structures, dictionaries).
   **Note**: unlike standard AllJoyn, Properties in the DDAPI are read-only. If
   an individual Property must be directly changeable by a Consumer, we
   recommend you create a dedicated method call (see below) for that purpose.
@@ -57,7 +57,7 @@ An AllJoyn Interface consists of the following parts:
   has a name and a type.
 * a set of *Methods*. Methods are the only way in which a Consumer can directly
   interact with a given Object. Methods have a name, and a set of input and
-  output arguments, which each have a name and a type.  
+  output arguments, which each have a name and a type.
   **Note**: Methods may seem like a really convenient and obvious way to model
   all the Consumer-Provider interactions in your distributed application.
   However, the closely coupled interaction model that results from such a
@@ -75,7 +75,7 @@ programming language and platform of your choice. (For the first release of the
 DDAPI, that means C++ on Linux. We're working hard on extending the list of
 supported languages and platforms...)
 
-### Objects and Interfaces
+### Objects and interfaces
 
 AllJoyn Interfaces serve as the formal specification of the kind of information
 or service offered by a Provider. In order to offer said Interface to
@@ -103,7 +103,7 @@ DDAPI generate a unique object path for you.
 At the Consumer side, you can retrieve the two components from the ObjectId,
 but we advise you to treat an ObjectId as a single, opaque value.
 
-### Publish-Subscribe communication
+### Publish-subscribe communication
 
 The DDAPI is based on the publish-subscribe paradigm. This paradigm enables a
 complete decoupling of information providers and consumers. This decoupling is
@@ -144,7 +144,7 @@ DDAPI than with standard AllJoyn. But we urge you to at least consider a more
 data-oriented, publish-subscribe based approach. You'll soon learn to
 appreciate the elegance and benefits offered by this approach.
 
-### The Provider role
+### The provider role
 
 As a Provider, it makes sense to reason in terms of Objects. Your role is
 basically to manage a set of physical (say, an HVAC system) or virtual
@@ -159,21 +159,22 @@ if you manage a system that can only heat, or only cool, instead of doing both.
 
 In short, these are the steps you have to take as a Provider:
 
-1. Create a `BusConnection`, the DDAPI object that encapsulates your connection
-   to the AllJoyn Bus.
-
-2. Define a custom class for each kind of Object (each combination of
+1. Define a custom class for each kind of Object (each combination of
    Interfaces) you want to provide. You'll need to inherit from `ProvidedObject`
    (defined in the DDAPI library) and the various `FooInterface` classes (the
    Code Generator creates an `xyzInterface` class for each Interface `xyz`). In this
    class, you provide implementations for the Methods defined in the Interfaces,
    and any other business logic you may need.
 
+2. Create an `ObjectAdvertiser` (using the factory method `Create`), the DDAPI
+   object that encapsulates your connection to the AllJoyn Bus.
+
 3. Create an object of your class, and expose it on the bus by calling
    `object.UpdateAll()`.
 
 4. Whenever the observable Properties of your object change, call
-   `object::FooInterface.Update()`.
+   `object::FooInterface.Update()` to emit the changes of a specific interface
+   or object.UpdateAll() to emit the changes of all interfaces.
 
 5. To emit a signal (say, signal `Bar` with 2 arguments), call `object.Bar(arg1,
    arg2)`.
@@ -181,7 +182,7 @@ In short, these are the steps you have to take as a Provider:
 6. When the object is no longer relevant, remove it from the Bus by calling
    `object.RemoveFromBus()`.
 
-### The Consumer role
+### The consumer role
 
 As a Consumer, you want to reason in terms of what you are interested in, and
 not necessarily in terms of how the various Providers package that information
@@ -199,27 +200,26 @@ are guaranteed to have the same ObjectId.
 
 In short, these are the steps you have to take as a Consumer:
 
-1. Create a `BusConnection`.
+1. For each Interface Foo you're interested in, create an `Observer<FooProxy>`
+   (using the factory method `Create`).  The Code Generator will create the
+   `FooProxy` class for you.
 
-2. For each Interface Foo you're interested in, create an `Observer<FooProxy>`.
-   The Code Generator will create the `FooProxy` class for you.
-
-3. If you're interested in receiving notifications for the discovered Object's
+2. If you're interested in receiving notifications for the discovered Object's
    lifecycle events (Objects appear, get property updates, disappear), you have
    to create a concrete subclass of `Observer<FooProxy>::Listener`, and pass an
-   object of that subclass as an argument of the Observer constructor.
+   object of that subclass as an argument of the Observer's `Create` method.
 
-4. Attach signal listeners to the Observer. A `SignalListener<FooProxy,
+3. Attach signal listeners to the Observer. A `SignalListener<FooProxy,
    FooProxy::Bar>` will notify the Consumer whenever an Object that implements
    Interface Foo emits signal Bar.
 
-5. At any time, you can iterate over (proxies for) the discovered Objects, or
+4. At any time, you can iterate over (proxies for) the discovered Objects, or
    retrieve a proxy for a particular Object via its ObjectId.
 
-6. To call a Method `Baz` on a remote Object, simply call `proxy->Baz(arg1,
+5. To call a Method `Baz` on a remote Object, simply call `proxy->Baz(arg1,
    arg2)`. This returns an object of type
    `MethodInvocation<FooProxy::BazReply>`. Via this object, you can track the
-   progress of the RPC call, and retrieve its final result or error code.
+   progress of the method call, and retrieve its final result or error code.
 
 ## Example: a simple home security system
 
@@ -256,14 +256,16 @@ The resulting data model looks like this:
 ~~~ {.xml}
 <node>
   <interface name="org.allseenalliance.sample.Door">
-    <property name="open" type="b" access="read" />
-    <property name="location" type="s" access="read" />
+    <property name="open" type="b" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="location" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
 
     <method name="Open">
-      <arg name="success" type="b" direction="out"/>
     </method>
     <method name="Close">
-      <arg name="success" type="b" direction="out"/>
     </method>
     <signal name="PersonPassedThrough">
       <arg name="who" type="s"/>
@@ -275,26 +277,26 @@ The resulting data model looks like this:
 Argument and property types are specified as per the [Dbus
 specification](http://dbus.freedesktop.org/doc/dbus-specification.html).
 
-### Generate Helper Code
+### Generate helper code
 
 If we run our data model definition through the Code Generator, we get six
 source code files:
 
 ~~~
 $ ajcodegen.py -t ddcpp door.xml
-$ ls -go
- -rw-rw-r-- 1   3725 May 21 10:17 DoorInterface.cc
- -rw-rw-r-- 1   3785 May 21 10:17 DoorInterface.h
- -rw-rw-r-- 1   4405 May 21 10:17 DoorProxy.cc
- -rw-rw-r-- 1   4644 May 21 10:17 DoorProxy.h
- -rw-rw-r-- 1   1891 May 21 10:17 DoorTypeDescription.cc
- -rw-rw-r-- 1   2014 May 21 10:17 DoorTypeDescription.h
+$ ls -1
+ DoorInterface.cc
+ DoorInterface.h
+ DoorProxy.cc
+ DoorProxy.h
+ DoorTypeDescription.cc
+ DoorTypeDescription.h
 ~~~
 
 The first two files are to be used by the provider, the next two files are
 to be used by consumer. The last two files are used by both.
 
-### Implement the Provider
+### Implement the provider
 
 #### Define business logic for the door
 
@@ -312,13 +314,13 @@ using namespace std;
 using namespace::gen::org_allseenalliance_sample;
 class Door : public datadriven::ProvidedObject, public DoorInterface {
   public:
-    Door(datadriven::BusConnection& busconn, qcc::String _location, bool _open = false) :
-        datadriven::ProvidedObject(busconn),
+    Door(shared_ptr<datadriven::ObjectAdvertiser> advertiser, qcc::String _location, bool _open = false) :
+        datadriven::ProvidedObject(advertiser),
         DoorInterface(this), open(_open), location(_location)
     {
         /* note that the "open" and "location" properties from the Door interface
          * are now (protected) fields of the DoorInterface abstract class. It's up
-         * to the application logic defined in this class to properly initialize 
+         * to the application logic defined in this class to properly initialize
          * them and keep them up to date.
          */
     }
@@ -337,13 +339,13 @@ defined in the Door interface.
 void Door::Open(OpenReply& reply)
 {
     if (this->open) {
-        /* door already open, so return success = false */
-        reply.Send(false); /* reply.Send takes the method outargs as arguments */
+        /* door already open, so return an error */
+        reply.SendErrorCode(ER_FAIL);
     } else {
         /* OK, we can open it. */
         this->open = true; /* update the observable properties */
         this->DoorInterface::Update(); /* let the world know we are in a new consistent state */
-        reply.Send(true); /* send method outargs back to caller */
+        reply.Send(); /* notify caller of completion (no output arguments) */
     }
 }
 
@@ -363,39 +365,37 @@ Consumer.
 
 Now we create an actual Door object, and make it available on the AllJoyn Bus.
 First, we need to set up a connection to the AllJoyn Bus via the
-`BusConnection` object. You only have to do this once, even if you provide
-multiple objects or if you provide and consume at the same time.
+`ObjectAdvertiser` object. You only have to do this once, even if you provide
+multiple objects.  As the DDAPI does not use exceptions, you have to make sure
+that the returned advertiser shared pointer is valid.
 
 ~~~ {.cpp}
 int main()
 {
-    datadriven::BusConnection busConnection;
-    if (ER_OK != busConnection.GetStatus()) {
-        cerr << "Bus Connection not correctly initialized !!!" << endl;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create();
+    if (nullptr == advertiser) {
+        cerr << "Object advertiser not correctly initialized !!!" << endl;
         return EXIT_FAILURE;
     }
 
-    publish_doors(busConnection);
+    publish_doors(advertiser);
 
     return EXIT_SUCCESS;
 }
 ~~~
 
-As the DDAPI does not use exceptions, you have to check the status after
-construction manually.
-
 Next, we create some Door objects and advertise them on the AllJoyn Bus.
 
 ~~~ {.cpp}
-void publish_doors(datadriven::BusConnection& busConnection)
+void publish_doors(shared_ptr<datadriven::ObjectAdvertiser> advertiser)
 {
     //The front door
-    Door frontDoor(busConnection, "front", false);
+    Door frontDoor(advertiser, "front", false);
     assert(ER_OK == frontDoor.GetStatus());
     assert(ER_OK == frontDoor.UpdateAll()); //Advertise the door
 
     //The back door
-    Door backDoor(busConnection, "back", false);
+    Door backDoor(advertiser, "back", false);
     assert(ER_OK == backDoor.GetStatus());
     assert(ER_OK == backDoor.UpdateAll()); //Advertise the door
 
@@ -409,29 +409,31 @@ void publish_doors(datadriven::BusConnection& busConnection)
 
 This concludes an elementary provider.
 
-### Implement the Consumer
+### Implement the consumer
 
-#### Connect to the Bus and discover all Objects that implement the Door interface
+#### Connect to the bus and discover all Objects that implement the Door interface
 
-As a Consumer, the first thing to do is to create a `BusConnection` and a `Listener` to
+As a Consumer, the first thing to do is to create a `Listener` to
 get Object life cycle notifications. The second thing is subscribing to all the
-Interfaces you're interested in. The latter is done by creating an `Observer` of the
-appropriate type.
+Interfaces you're interested in. This is done by creating an `Observer` of the
+appropriate type.  As the DDAPI does not use exceptions, you have to make sure
+that the returned observer shared pointer is valid.
 
 ~~~ {.cpp}
 #include <datadriven/datadriven.h>
 #include "DoorProxy.h"
 
+using namespace std;
 using namespace::gen::org_allseenalliance_sample;
 
 int main()
 {
-    datadriven::BusConnection busConnection;
-    assert(ER_OK == busConnection.GetStatus());
-
     MyDoorListener dl = MyDoorListener();
-    datadriven::Observer<DoorProxy> observer(busConnection, &dl);
-    assert(ER_OK == observer.GetStatus());
+    shared_ptr<datadriven::Observer<DoorProxy> > observer = Observer::Create(&dl);
+    if (nullptr == observer) {
+        cerr << "Observer not correctly initialized !!!" << endl;
+        return EXIT_FAILURE;
+    }
 
     /* ... */
 
@@ -439,7 +441,7 @@ int main()
 }
 ~~~
 
-#### Interacting with an Object through its proxy
+#### Interacting with an object through its proxy
 
 So, what is this `DoorProxy`? At the consumer side, you cannot directly
 work with Door objects (remember, they are at the provider side). That's why there
@@ -453,9 +455,9 @@ The `shared_ptr` construction allows the DDAPI to ensure that there is only one
 copy of each proxy object, and that it remains firmly in control of the life
 cycle of that proxy object.
 
-##### Access Properties
+##### Access properties
 
-When you have a `std::shared_ptr<DoorProxy>`, you can always access the last known Properties for that door Object by calling `GetProperties()`.
+When you have a `shared_ptr<DoorProxy>`, you can always access the last known Properties for that door Object by calling `GetProperties()`.
 
 ~~~ {.cpp}
     const DoorProxy::Properties prop = door->GetProperties();
@@ -463,19 +465,19 @@ When you have a `std::shared_ptr<DoorProxy>`, you can always access the last kno
     bool open = prop.open;
 ~~~
 
-##### Invoke Methods
+##### Invoke methods
 
 To invoke a Method on a remote Object, simply invoke that method on its local
 proxy. All method invocations in the DDAPI are asynchronous: they don't block
 to wait for a reply, but rather return a `shared_ptr<MethodInvocation>` object that you can
 use to track progress of the method call, and to retrieve the final result or
 error message for the method call. If you *do* want to block until you receive a
-reply, call the `GetReply()` method on the `MethodInvocation` object. 
+reply, call the `GetReply()` method on the `MethodInvocation` object.
 
 ~~~ {.cpp}
 void open_door(shared_ptr<DoorProxy> door)
 {
-    std::shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
+    shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
 
     /* at any point in time, we can check whether the method invocation is finished */
     if (READY == invocation->GetState()) {
@@ -499,7 +501,7 @@ void open_door(shared_ptr<DoorProxy> door)
 }
 ~~~
 
-##### Check Object liveliness
+##### Check object liveliness
 
 One obvious reason why a method invocation may fail is that the Provider has
 removed the Object from the Bus in the mean time. Therefore, you may want to
@@ -507,28 +509,28 @@ manually check the liveliness of an Object for which you hold a proxy. This is
 possible with the `IsAlive()` method.
 
 ~~~ {.cpp}
-    if (door->IsAlive) {
+    if (door->IsAlive()) {
         // yes, it's alive as far as our Observer knows
-    } 
+    }
 ~~~
 
 Note that the status returned by `IsAlive` is only a hint, not a certainty.
 We're dealing with a distributed system here, so the Observer can only report
 the *last known status*. There is always a small chance that the Provider
 removes the Object from the Bus in the exact same instant that you do the
-liveliness check. 
+liveliness check.
 
 #### Iterate over all discovered Objects
 
 You can iterate over an `Observer` to get proxies for all discovered Objects.
 
 ~~~ {.cpp}
-void list_doors(datadriven::Observer<DoorProxy> &observer)
+void list_doors(shared_ptr<datadriven::Observer<DoorProxy> > observer)
 {
-    datadriven::Observer<DoorProxy>::iterator it = observer.begin();
+    datadriven::Observer<DoorProxy>::iterator it = observer->begin();
 
-    for (; it != observer.end(); ++it) {
-        // *it is of type shared_ptr<DoorProxy> 
+    for (; it != observer->end(); ++it) {
+        // *it is of type shared_ptr<DoorProxy>
         // it-> dereferences twice, so the following line calls GetProperties on DoorProxy, not on the iterator.
         DoorProxy::Properties prop = it->GetProperties();
         cout << "Door location: " << prop.location.c_str() << " open: " << prop.open << endl;
@@ -536,15 +538,16 @@ void list_doors(datadriven::Observer<DoorProxy> &observer)
 }
 ~~~
 
-#### Get a proxy for a specific Object
+#### Get a proxy for a specific object
 
 If you know an Object's ObjectId, you can get a reference to the Object's proxy
-by calling `Observer::Get`.
+by calling `Observer::GetObject`.
 
 ~~~ {.cpp}
-void show_door(ObjectId& object_id)
+void show_door(shared_ptr<datadriven::Observer<DoorProxy> > observer,
+               ObjectId& object_id)
 {
-    shared_ptr<DoorProxy> door = observer.Get(object_id);
+    shared_ptr<DoorProxy> door = observer->GetObject(object_id);
     if (door) { // check for pointer validity
         DoorProxy::Properties prop = door->GetProperties();
         cout << "Door location: " << prop.location.c_str() << " open: " << prop.open << endl;
@@ -554,7 +557,7 @@ void show_door(ObjectId& object_id)
 }
 ~~~
 
-#### Get Object life cycle notifications
+#### Get object life cycle notifications
 
 In many cases, you'll want to know when doors appear, disappear, open or close.
 The `Observer` class accepts a listener via which you can get active
@@ -580,7 +583,7 @@ the appropriate callback methods:
 ~~~ {.cpp}
 class MyDoorListener : public datadriven::Observer<DoorProxy>::Listener {
   public:
-    void OnUpdate(const std::shared_ptr<DoorProxy>& door)
+    void OnUpdate(const shared_ptr<DoorProxy>& door)
     {
         /* Every DoorProxy has an ObjectId which can be regarded as the
          * unique identifier of the Door on the Bus. If you know the ObjectId,
@@ -593,7 +596,7 @@ class MyDoorListener : public datadriven::Observer<DoorProxy>::Listener {
              << prop.location.c_str() << " open = " << prop.open << "." << endl;
     }
 
-    void OnRemove(const std::shared_ptr<DoorProxy>& door)
+    void OnRemove(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
@@ -607,15 +610,18 @@ int main()
     /* ... */
 
     MyDoorListener dl = MyDoorListener();
-    datadriven::Observer<DoorProxy> observer(busConnection, &dl);
-    assert(ER_OK == observer.GetStatus());
+    shared_ptr<datadriven::Observer<DoorProxy> > observer = Observer::Create(&dl);
+    if (nullptr == observer) {
+        cerr << "Observer not correctly initialized !!!" << endl;
+        return EXIT_FAILURE;
+    }
 
     /* ... application logic */
-    
+
 }
 ~~~
 
-#### Get Signal notifications
+#### Get signal notifications
 
 Finally, we also want to be notified when someone passes through a door. You
 can add listeners to an `Observer` to get active notifications when one of the
@@ -632,7 +638,7 @@ class PPTListener : public datadriven::SignalListener<DoorProxy, DoorProxy::Pers
     void onSignal(const DoorProxy::PersonPassedThrough& signal)
     {
         const qcc::String who = signal.who; // signal argument
-        const std::shared_ptr<DoorProxy> door = signal.GetEmitter();
+        const shared_ptr<DoorProxy> door = signal.GetEmitter();
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << who.c_str() << " passed through a door at location " << prop.location.c_str() << endl;
@@ -644,11 +650,11 @@ int main()
     /* ... set up Observer */
 
     PPTListener l = PPTListener();
-    assert(ER_OK == observer.AddSignalListener<DoorProxy::PersonPassedThrough>(l));
+    assert(ER_OK == observer->AddSignalListener<DoorProxy::PersonPassedThrough>(l));
 
     /* ... application logic */
 
-    assert(ER_OK == observer.RemoveSignalListener<DoorProxy::PersonPassedThrough>(l));
+    assert(ER_OK == observer->RemoveSignalListener<DoorProxy::PersonPassedThrough>(l));
 }
 ~~~
 

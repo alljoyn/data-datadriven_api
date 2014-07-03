@@ -49,11 +49,29 @@ class ConsumerMethodReply {
     /**
      * Check whether the method call has successfully concluded.
      * \retval ER_OK Success.
+     * \retval ER_BUS_REPLY_IS_ERROR_MESSAGE The MethodReply send an error
+     *                string. The error string can be fetched by calling GetErrorName()
+     *                and the error description by calling GetErrorDescription().
      * \retval others The invocation of the method call failed. The actual
      *                error code provides more insight on the reason of the
-     *                failure.
+     *                failure. This error is either caused by a framework issue
+     *                or by a QStatus code send in the MethodReply.
      */
     QStatus GetStatus() const;
+
+    /**
+     * \brief Get the method reply errorName.
+     *
+     * \return Error string or empty string if no error
+     */
+    const qcc::String GetErrorName();
+
+    /**
+     * \brief Get the method reply errorDescription
+     *
+     * \return Empty string on no error or error description on error
+     */
+    const qcc::String GetErrorDescription();
 
   protected:
     /** \private
@@ -61,11 +79,15 @@ class ConsumerMethodReply {
      *
      * Abstract method.
      *
-     * \param[in]  message Message received from the underlying communication layer
+     * \param[in] msgarg  Array of message arguments received from the
+     *                    underlying communication layer
+     * \param[in] numArgs Number of message arguments received from the
+     *                    underlying communication layer
      * \retval ER_OK on success
      * \retval others on failure
      */
-    virtual QStatus Unmarshal(ajn::Message& message) = 0;
+    virtual QStatus Unmarshal(const ajn::MsgArg* msgarg,
+                              size_t numArgs) = 0;
 
     /** \private
      * Set the status of the method reply (OK, various failure reasons)
@@ -73,11 +95,39 @@ class ConsumerMethodReply {
      */
     void SetStatus(const QStatus status);
 
+    /** \private
+     * Set the errorName received in the MethodReply
+     * \param[in] errorName the errorName string
+     */
+    void SetErrorName(qcc::String errorName);
+
+    /** \private
+     * Set the errorDescription received in the MethodReply
+     * \param[in] errorDescription the errorDescription string
+     */
+    void SetErrorDescription(qcc::String errorDescription);
+
   private:
     /** Status */
     QStatus status;
+    qcc::String errorName;
+    qcc::String errorDescription;
 
-    template <typename> friend class MethodInvocation;
+    friend class MethodInvocationBase;
+};
+
+/**
+ * \class ConsumerMethodNoReply
+ * \brief Empty method response for fire-and-forget method calls.
+ */
+class ConsumerMethodNoReply :
+    public ConsumerMethodReply {
+  protected:
+    virtual QStatus Unmarshal(const ajn::MsgArg* msgarg,
+                              size_t numArgs)
+    {
+        return ER_OK;
+    }
 };
 }
 

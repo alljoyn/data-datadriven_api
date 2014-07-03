@@ -17,17 +17,15 @@
 #ifndef DATADRIVEN_H_
 #define DATADRIVEN_H_
 
-#include <datadriven/BusConnection.h>
 #include <datadriven/ObjectId.h>
 #include <datadriven/ProvidedObject.h>
-#include <datadriven/TypeDescription.h>
-#include <datadriven/RegisteredTypeDescription.h>
 #include <datadriven/ProvidedInterface.h>
 #include <datadriven/ProviderMethodReply.h>
-#include <datadriven/ProxyInterface.h>
 #include <datadriven/ConsumerMethodReply.h>
 #include <datadriven/MethodInvocation.h>
-#include <datadriven/Signal.h>
+#include <datadriven/SignalBase.h>
+#include <datadriven/SignalListener.h>
 #include <datadriven/Observer.h>
+#include <datadriven/ObjectAdvertiser.h>
 
 #endif /* DATADRIVEN_H_ */

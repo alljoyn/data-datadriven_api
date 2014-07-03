@@ -14,6 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <algorithm>
+#include <memory>
+
+#include <datadriven/ObjectAllocator.h>
+#include <datadriven/ObserverBase.h>
+
 #include "ObserverCache.h"
 
 #include <qcc/Debug.h>
@@ -21,25 +27,82 @@
 
 namespace datadriven {
 // PUBLIC //
-ObserverCache::ObserverCache()
+ObserverCache::ObserverCache(const qcc::String ifName) :
+    ifName(ifName)
 {
 }
 
-std::shared_ptr<ProxyInterface> ObserverCache::SetObject(const ObjectId& objId, ObjectAllocator& allocator)
+ObserverCache::~ObserverCache()
 {
-    std::shared_ptr<ProxyInterface> livingObj;
     mutex.Lock();
-    ObjectIdToSharedPtrMap::iterator aliveit = livingObjects.find(objId);
-    if (aliveit != livingObjects.end()) {
-        livingObj = aliveit->second;
+    if (0 != observers.size()) {
+        QCC_DbgPrintf(("The observer list was not empty"));
+        observers.clear();
+    }
+    mutex.Unlock();
+}
+
+void ObserverCache::AddObserver(std::weak_ptr<ObserverBase> observer)
+{
+    QCC_DbgPrintf(("Add observer to cache for interface %s", ifName.c_str()));
+    mutex.Lock();
+    ObserverSet::iterator found = observers.find(observer);
+    if (found == observers.end()) {
+        observers.insert(observer);
+    }
+    mutex.Unlock();
+}
+
+size_t ObserverCache::RemoveObserver(std::weak_ptr<ObserverBase> observer)
+{
+    mutex.Lock();
+    ObserverSet::iterator found = observers.find(observer);
+    if (found != observers.end()) {
+        QCC_DbgPrintf(("Remove observer from cache for interface %s", ifName.c_str()));
+        observers.erase(found);
+    }
+    size_t size = observers.size();
+    mutex.Unlock();
+    return size;
+}
+
+void ObserverCache::NotifyObserver(std::weak_ptr<ObserverBase> observer)
+{
+    QCC_DbgPrintf(("Notify observer about objects in cache for interface %s", ifName.c_str()));
+    mutex.Lock();
+    std::shared_ptr<ObserverBase> obs = observer.lock();
+    if (nullptr != obs) {
+        for (ObjectIdToSharedPtrMap::iterator iterator = livingObjects.begin(); iterator != livingObjects.end();
+             iterator++) {
+            mutex.Unlock();
+            obs->UpdateObject(iterator->second);
+            mutex.Lock();
+            iterator = livingObjects.lower_bound(iterator->first);
+        }
+    }
+    mutex.Unlock();
+}
+
+void ObserverCache::SetAllocator(std::weak_ptr<ObjectAllocator> alloc)
+{
+    allocator = alloc;
+}
+
+std::shared_ptr<ProxyInterface> ObserverCache::AddObject(const ObjectId& objId)
+{
+    std::shared_ptr<ProxyInterface> proxyObj;
+    mutex.Lock();
+    ObjectIdToSharedPtrMap::iterator aliveIterator = livingObjects.find(objId);
+    if (aliveIterator != livingObjects.end()) {
+        proxyObj = aliveIterator->second;
         QCC_DbgPrintf(("Update object @%s, path = '%s', session = %lu",
                        objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
     } else {
-        ObjectIdToWeakPtrMap::iterator deadit = deadObjects.find(objId);
-        if (deadit != deadObjects.end()) {
+        ObjectIdToWeakPtrMap::iterator deadIterator = deadObjects.find(objId);
+        if (deadIterator != deadObjects.end()) {
             /* We have to potentially resurrect the dead object (insert joke here :)) */
-            livingObj = deadit->second.lock();
-            if (livingObj) {
+            proxyObj = deadIterator->second.lock();
+            if (proxyObj) {
                 /* object was still there: promote it */
                 QCC_DbgPrintf(("Resurrect object @%s, path = '%s', session = %lu",
                                objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
@@ -51,25 +114,42 @@ std::shared_ptr<ProxyInterface> ObserverCache::SetObject(const ObjectId& objId, 
                                (unsigned long)objId.GetSessionId()));
             }
 
-            deadObjects.erase(deadit);
+            deadObjects.erase(deadIterator);
         } else {
             QCC_DbgPrintf(("There was no weak ptr @%s, pth = '%s', session = %lu",
                            objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
                            (unsigned long)objId.GetSessionId()));
         }
 
-        if (!livingObj) {
-            livingObj = std::shared_ptr<ProxyInterface>(allocator.Alloc(objId));
+        if (nullptr == proxyObj) {
+            std::shared_ptr<ObjectAllocator> alloc = allocator.lock();
+            if (nullptr != alloc) {
+                proxyObj = std::shared_ptr<ProxyInterface>(alloc->Alloc(objId));
+            }
         }
 
-        livingObjects.insert(aliveit, std::pair<ObjectId, std::shared_ptr<ProxyInterface> >(objId, livingObj));
-        livingObj->SetAlive(true);
-        QCC_DbgPrintf(("(Re-)add object @%s, path = '%s', session = %lu",
-                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+        if (nullptr != proxyObj) {
+            livingObjects.insert(aliveIterator, std::pair<ObjectId, std::shared_ptr<ProxyInterface> >(objId, proxyObj));
+            proxyObj->SetAlive(true);
+            QCC_DbgPrintf(("(Re-)add object @%s, path = '%s', session = %lu",
+                           objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
+                           (unsigned long)objId.GetSessionId()));
+        }
     }
-
     mutex.Unlock();
-    return livingObj;
+
+    if (nullptr != proxyObj) {
+        // Notify All observers
+        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
+             vectorIterator != observers.end();
+             vectorIterator++) {
+            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
+            if (observer) {
+                observer->AddObject(proxyObj);
+            }
+        }
+    }
+    return proxyObj;
 }
 
 std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objId)
@@ -81,7 +161,7 @@ std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objI
     assert(it != livingObjects.end());
 
     std::weak_ptr<ProxyInterface> weak(it->second);
-    std::shared_ptr<ProxyInterface> obj = it->second;
+    std::shared_ptr<ProxyInterface> proxyObj = it->second;
     it->second->SetAlive(false);
 
     livingObjects.erase(it);
@@ -92,10 +172,66 @@ std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objI
     QCC_DbgPrintf(("Remove object @%s, path = '%s', session = %lu",
                    objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
     GarbageCollect();         /* TODO: not always trigger this */
-    return obj;
+
+    if (nullptr != proxyObj) {
+        // Notify All observers
+        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
+             vectorIterator != observers.end();
+             vectorIterator++) {
+            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
+            if (observer) {
+                observer->RemoveObject(proxyObj);
+            }
+        }
+    }
+    return proxyObj;
 }
 
-std::shared_ptr<ProxyInterface> ObserverCache::Get(const ObjectId& objId)
+std::shared_ptr<ProxyInterface> ObserverCache::UpdateObject(const ObjectId& objId, const ajn::MsgArg* dict)
+{
+    mutex.Lock();
+    std::shared_ptr<ProxyInterface> proxyObj = nullptr;
+    QStatus status = ER_OK;
+    ObjectIdToSharedPtrMap::iterator it = livingObjects.find(objId);
+    if (it != livingObjects.end()) {
+        proxyObj = it->second;
+        proxyObj->UpdateProperties(dict);
+        status = proxyObj->GetStatus();
+        if (ER_OK != status) {
+            QCC_LogError(ER_FAIL, ("UpdateObject: Failed to unmarshal properties"));
+        }
+    }
+    mutex.Unlock();
+
+    // Notify all observers about the change in proxy interface objects
+    if (nullptr != proxyObj) {
+        // Notify All observers
+        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
+             vectorIterator != observers.end();
+             vectorIterator++) {
+            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
+            if (observer) {
+                if (ER_OK == status) {
+                    observer->UpdateObject(proxyObj);
+                } else {
+                    /* Let the observer know something went wrong with the proxyObj */
+                    observer->RemoveObject(proxyObj);
+                }
+            }
+        }
+        if (ER_OK != status) {
+            /* Reset the proxyObj */
+            proxyObj.reset();
+        }
+    } else {
+        QCC_DbgPrintf(("Failed to find object @%s, path = '%s', session = %lu",
+                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+    }
+
+    return proxyObj;
+}
+
+std::shared_ptr<ProxyInterface> ObserverCache::GetObject(const ObjectId& objId)
 {
     mutex.Lock();
     ObjectIdToSharedPtrMap::iterator it = livingObjects.find(objId);

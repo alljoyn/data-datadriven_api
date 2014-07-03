@@ -23,23 +23,24 @@
 #include "DoorProxy.h"
 
 using namespace std;
-using namespace::gen::org_allseenalliance_sample;
+using namespace gen::org_allseenalliance_sample;
 
 class MyDoorListener :
     public datadriven::Observer<DoorProxy>::Listener {
   public:
-    void OnUpdate(const std::shared_ptr<DoorProxy>& door)
+    void OnUpdate(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << "[listener] Update for door " << id << ": location = "
-             << prop.location.c_str() << " open = " << prop.open << "." << endl;
+             << prop.location.c_str() << ", open = " << prop.open << ", code = "
+             << door->Getcode()->GetReply().code << "." << endl;
         cout << "> ";
         cout.flush();
     }
 
-    void OnRemove(const std::shared_ptr<DoorProxy>& door)
+    void OnRemove(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
@@ -55,7 +56,7 @@ class MyDoorSignalListener :
     public datadriven::SignalListener<DoorProxy, DoorProxy::PersonPassedThrough> {
     void OnSignal(const DoorProxy::PersonPassedThrough& signal)
     {
-        const std::shared_ptr<DoorProxy> door = signal.GetEmitter(); //Retrieve the door
+        const shared_ptr<DoorProxy> door = signal.GetEmitter(); //Retrieve the door
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
@@ -66,24 +67,21 @@ class MyDoorSignalListener :
     }
 };
 
-datadriven::BusConnection g_busConnection;
-MyDoorListener dl = MyDoorListener();
-datadriven::Observer<DoorProxy> g_observer(g_busConnection, &dl);
-
 static void help()
 {
     cout << "q             quit" << endl;
     cout << "l             list all discovered doors" << endl;
     cout << "o <location>  open door at <location>" << endl;
     cout << "c <location>  close door at <location>" << endl;
+    cout << "k <location>  knock-and-run at <location>" << endl;
     cout << "h             display this help message" << endl;
 }
 
-static void list_doors()
+static void list_doors(datadriven::Observer<DoorProxy>* observer)
 {
-    datadriven::Observer<DoorProxy>::iterator it = g_observer.begin();
+    datadriven::Observer<DoorProxy>::iterator it = observer->begin();
 
-    for (; it != g_observer.end(); ++it) {
+    for (; it != observer->end(); ++it) {
         datadriven::ObjectId id = it->GetObjectId();
         DoorProxy::Properties prop = it->GetProperties();
 
@@ -91,11 +89,11 @@ static void list_doors()
     }
 }
 
-static shared_ptr<DoorProxy> get_door_at_location(const string& location)
+static shared_ptr<DoorProxy> get_door_at_location(datadriven::Observer<DoorProxy>* observer, const string& location)
 {
-    datadriven::Observer<DoorProxy>::iterator it = g_observer.begin();
+    datadriven::Observer<DoorProxy>::iterator it = observer->begin();
 
-    for (; it != g_observer.end(); ++it) {
+    for (; it != observer->end(); ++it) {
         DoorProxy::Properties prop = it->GetProperties();
 
         if (!strcmp(prop.location.c_str(), location.c_str())) {
@@ -106,38 +104,72 @@ static shared_ptr<DoorProxy> get_door_at_location(const string& location)
     return shared_ptr<DoorProxy>();
 }
 
-static void open_door(const string& location)
+static void open_door(datadriven::Observer<DoorProxy>* observer, const string& location)
 {
-    shared_ptr<DoorProxy> door = get_door_at_location(location);
+    shared_ptr<DoorProxy> door = get_door_at_location(observer, location);
 
     if (door) {
-        std::shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
+        shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
         DoorProxy::OpenReply reply = invocation->GetReply();
 
         if (ER_OK == reply.GetStatus()) {
-            cout << "Opening of door " << (reply.success ? "succeeded" : "failed") << endl;
+            /* No error */
+
+            cout << "Opening of door succeeded" << endl;
+        } else if (ER_BUS_REPLY_IS_ERROR_MESSAGE == reply.GetStatus()) {
+            /* MethodReply Error received (an error string) */
+
+            cout << "Opening of door @ location " << location.c_str()
+                 << " returned an error \"" << reply.GetErrorName().c_str()
+                 << "\" (" << reply.GetErrorDescription().c_str() << ")" << endl;
         } else {
-            cout << "Invocation error occurred while trying to open a door @ location: " << location.c_str() << endl;
+            /* Framework error or MethodReply error code */
+
+            cout << "Opening of door @ location " << location.c_str()
+                 << " returned an error \"" <<  QCC_StatusText(reply.GetStatus()) << "\"" << endl;
         }
     }
 }
 
-static void close_door(const string& location)
+static void close_door(datadriven::Observer<DoorProxy>* observer, const string& location)
 {
-    shared_ptr<DoorProxy> door = get_door_at_location(location);
+    shared_ptr<DoorProxy> door = get_door_at_location(observer, location);
 
     if (door) {
-        std::shared_ptr<datadriven::MethodInvocation<DoorProxy::CloseReply> > invocation = door->Close();
+        shared_ptr<datadriven::MethodInvocation<DoorProxy::CloseReply> > invocation = door->Close();
         DoorProxy::CloseReply reply = invocation->GetReply();
         if (ER_OK == reply.GetStatus()) {
-            cout << "Closing of door " << (reply.success ? "succeeded" : "failed") << endl;
+            /* No error */
+
+            cout << "Closing of door succeeded" << endl;
+        } else if (ER_BUS_REPLY_IS_ERROR_MESSAGE == reply.GetStatus()) {
+            /* MethodReply Error received (an error string) */
+
+            cout << "Closing of door @ location " << location.c_str()
+                 << " returned an error \"" << reply.GetErrorName().c_str()
+                 << "\" (" << reply.GetErrorDescription().c_str() << ")" << endl;
         } else {
-            cout << "Invocation error occurred while trying to close a door @ location: " << location.c_str() << endl;
+            /* Framework error or MethodReply error code */
+
+            cout << "Closing of door @ location " << location.c_str()
+                 << " returned an error \"" <<  QCC_StatusText(reply.GetStatus()) << "\"" << endl;
         }
     }
 }
 
-static bool parse(const string& input)
+static void knock_and_run(datadriven::Observer<DoorProxy>* observer, const string& location)
+{
+    shared_ptr<DoorProxy> door = get_door_at_location(observer, location);
+
+    if (door) {
+        if (ER_OK != door->KnockAndRun()) {
+            cout << "A framework error occurred while trying to knock on door @ location "
+                 << location.c_str() << endl;
+        }
+    }
+}
+
+static bool parse(datadriven::Observer<DoorProxy>* observer, const string& input)
 {
     char cmd;
     size_t argpos;
@@ -158,15 +190,19 @@ static bool parse(const string& input)
         return false;
 
     case 'l':
-        list_doors();
+        list_doors(observer);
         break;
 
     case 'o':
-        open_door(arg);
+        open_door(observer, arg);
         break;
 
     case 'c':
-        close_door(arg);
+        close_door(observer, arg);
+        break;
+
+    case 'k':
+        knock_and_run(observer, arg);
         break;
 
     case 'h':
@@ -180,18 +216,16 @@ static bool parse(const string& input)
 
 int main(int argc, char** argv)
 {
-    if (ER_OK != g_busConnection.GetStatus()) {
-        cerr << "Bus Connection not correctly initialized !!!" << endl;
-        return EXIT_FAILURE;
-    }
+    MyDoorListener dl = MyDoorListener();
+    shared_ptr<datadriven::Observer<DoorProxy> > observer = datadriven::Observer<DoorProxy>::Create(&dl);
 
-    if (ER_OK != g_observer.GetStatus()) {
+    if (nullptr == observer) {
         cerr << "Observer not correctly initialized !!!" << endl;
         return EXIT_FAILURE;
     }
 
     MyDoorSignalListener myDoorSignalListener = MyDoorSignalListener();
-    if (ER_OK != g_observer.AddSignalListener<DoorProxy::PersonPassedThrough>(myDoorSignalListener)) {
+    if (ER_OK != observer->AddSignalListener<DoorProxy::PersonPassedThrough>(myDoorSignalListener)) {
         cerr << "Could not add Signal Listener to the Observer !!!" << endl;
         return EXIT_FAILURE;
     }
@@ -201,12 +235,12 @@ int main(int argc, char** argv)
         string input;
         cout << "> ";
         getline(cin, input);
-        done = !parse(input);
+        done = !parse(observer.get(), input);
     }
 
     // Cleanup
     int result = EXIT_SUCCESS;
-    if (ER_OK != g_observer.RemoveSignalListener<DoorProxy::PersonPassedThrough>(myDoorSignalListener)) {
+    if (ER_OK != observer->RemoveSignalListener<DoorProxy::PersonPassedThrough>(myDoorSignalListener)) {
         cerr << "Could not remove Signal Listener from the Observer !!!" << endl;
         result = EXIT_FAILURE;
     }

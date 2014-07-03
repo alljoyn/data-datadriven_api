@@ -16,7 +16,7 @@
 
 #include <iostream>
 
-#include <datadriven/RegisteredTypeDescription.h>
+#include "RegisteredTypeDescription.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_COMMON"

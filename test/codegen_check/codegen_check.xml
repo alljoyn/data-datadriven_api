@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<node xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="https://www.allseenalliance.org/schemas/introspect_ext.xsd">
+
+  <!-- some checks regarding generated identifiers  -->
+
+  <interface name="org.allseenalliance.test.IdCheckPropsDD">
+
+    <property name="message" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="reply" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="status" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="msgarg" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="numArgs" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="obj" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="inv" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="data" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="desc" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="iface" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="timeout" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="sp" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="name" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="value" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="it" type="i" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+
+  </interface>
+
+  <interface name="org.allseenalliance.test.IdCheckPropsRW">
+
+    <property name="message" type="i" access="readwrite"/>
+    <property name="reply" type="i" access="readwrite"/>
+    <property name="status" type="s" access="readwrite"/>
+    <property name="msgarg" type="i" access="readwrite"/>
+    <property name="numArgs" type="s" access="readwrite"/>
+    <property name="obj" type="i" access="readwrite"/>
+    <property name="inv" type="i" access="readwrite"/>
+    <property name="data" type="i" access="readwrite"/>
+    <property name="desc" type="i" access="readwrite"/>
+    <property name="iface" type="i" access="readwrite"/>
+    <property name="timeout" type="s" access="readwrite"/>
+    <property name="sp" type="i" access="readwrite"/>
+    <property name="name" type="i" access="readwrite"/>
+    <property name="value" type="i" access="readwrite"/>
+    <property name="it" type="i" access="readwrite"/>
+
+  </interface>
+
+  <interface name="org.allseenalliance.test.IdCheckMethods">
+
+    <method name="MethodArgIdentifierIn">
+      <arg name="message" type="i" direction="in" />
+      <arg name="reply" type="i" direction="in" />
+      <arg name="status" type="i" direction="in" />
+      <arg name="msgarg" type="i" direction="in" />
+      <arg name="numArgs" type="i" direction="in" />
+      <arg name="obj" type="i" direction="in" />
+      <arg name="inv" type="i" direction="in" />
+      <arg name="data" type="i" direction="in" />
+      <arg name="desc" type="i" direction="in" />
+      <arg name="iface" type="i" direction="in" />
+      <arg name="timeout" type="i" direction="in" />
+      <arg name="sp" type="i" direction="in"/>
+      <arg name="name" type="i" direction="in"/>
+      <arg name="value" type="i" direction="in"/>
+      <arg name="it" type="i" direction="in"/>
+    </method>
+
+    <method name="MethodArgIdentifierOut">
+      <arg name="message" type="i" direction="out" />
+      <arg name="reply" type="i" direction="out" />
+      <arg name="status" type="i" direction="out" />
+      <arg name="msgarg" type="i" direction="out" />
+      <arg name="numArgs" type="i" direction="out" />
+      <arg name="obj" type="i" direction="out" />
+      <arg name="inv" type="i" direction="out" />
+      <arg name="data" type="i" direction="out" />
+      <arg name="desc" type="i" direction="out" />
+      <arg name="iface" type="i" direction="out" />
+      <arg name="timeout" type="i" direction="out" />
+      <arg name="sp" type="i" direction="out"/>
+      <arg name="name" type="i" direction="out"/>
+      <arg name="value" type="i" direction="out"/>
+      <arg name="it" type="i" direction="out"/>
+    </method>
+
+  </interface>
+
+  <interface name="org.allseenalliance.test.IdCheckSignals">
+
+    <signal name="SignalArgIdentifier">
+      <arg name="message" type="i" />
+      <arg name="reply" type="i" />
+      <arg name="status" type="i" />
+      <arg name="msgarg" type="i" />
+      <arg name="numArgs" type="i" />
+      <arg name="obj" type="i" />
+      <arg name="inv" type="i" />
+      <arg name="data" type="i" />
+      <arg name="desc" type="i" />
+      <arg name="iface" type="i" />
+      <arg name="timeout" type="i" />
+      <arg name="sp" type="i"/>
+      <arg name="name" type="i"/>
+      <arg name="value" type="i"/>
+      <arg name="it" type="i"/>
+    </signal>
+
+  </interface>
+
+  <interface name="org.allseenalliance.test.NoReplyCheckMethods">
+    <method name="NoReplyMethodWithoutArgs">
+        <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
+    </method>
+    <method name="NoReplyMethodWithArgs">
+      <arg name="arg" type="b" direction="in"/>
+      <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
+    </method>
+  </interface>
+
+</node>

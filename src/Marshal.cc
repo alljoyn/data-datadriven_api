@@ -17,6 +17,11 @@
 #include <datadriven/Marshal.h>
 
 namespace datadriven {
+const ajn::MsgArg& MsgArgDereference(const ajn::MsgArg& msgarg)
+{
+    return (ajn::ALLJOYN_VARIANT == msgarg.typeId ? *msgarg.v_variant.val : msgarg);
+}
+
 QStatus MarshalArray(ajn::MsgArg& msgarg,
                      ajn::MsgArg* elements,
                      size_t numElements)
@@ -142,6 +147,15 @@ QStatus Marshal(ajn::MsgArg& msgarg, const ObjectPath& data)
     return msgarg.Set("o", data.c_str());
 }
 
+QStatus Marshal(ajn::MsgArg& msgarg, const ajn::MsgArg& data)
+{
+    QStatus status = msgarg.Set("v", data.v_variant.val);
+    if (ER_OK == status) {
+        msgarg.Stabilize();
+    }
+    return status;
+}
+
 QStatus Unmarshal(bool& data, const ajn::MsgArg& msgarg)
 {
     if (ajn::ALLJOYN_BOOLEAN != msgarg.typeId) {
@@ -262,11 +276,22 @@ QStatus Unmarshal(ObjectPath& data, const ajn::MsgArg& msgarg)
     }
 }
 
+QStatus Unmarshal(ajn::MsgArg& data, const ajn::MsgArg& msgarg)
+{
+    if (ajn::ALLJOYN_VARIANT != msgarg.typeId) {
+        return ER_FAIL;
+    } else {
+        data = msgarg;
+        return ER_OK;
+    }
+}
+
 template <> QStatus Unmarshal<bool>(std::vector<bool>& data, const ajn::MsgArg& msgarg)
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_BOOLEAN_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_BOOLEAN_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_bool,
                     msgarg.v_scalarArray.v_bool + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -278,7 +303,8 @@ template <> QStatus Unmarshal<uint8_t>(std::vector<uint8_t>& data, const ajn::Ms
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_BYTE_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_BYTE_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_byte,
                     msgarg.v_scalarArray.v_byte + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -290,7 +316,8 @@ template <> QStatus Unmarshal<int16_t>(std::vector<int16_t>& data, const ajn::Ms
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_INT16_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_INT16_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_int16,
                     msgarg.v_scalarArray.v_int16 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -302,7 +329,8 @@ template <> QStatus Unmarshal<uint16_t>(std::vector<uint16_t>& data, const ajn::
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_UINT16_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_UINT16_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_uint16,
                     msgarg.v_scalarArray.v_uint16 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -314,7 +342,8 @@ template <> QStatus Unmarshal<int32_t>(std::vector<int32_t>& data, const ajn::Ms
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_INT32_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_INT32_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_int32,
                     msgarg.v_scalarArray.v_int32 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -326,7 +355,8 @@ template <> QStatus Unmarshal<uint32_t>(std::vector<uint32_t>& data, const ajn::
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_UINT32_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_UINT32_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_uint32,
                     msgarg.v_scalarArray.v_uint32 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -338,7 +368,8 @@ template <> QStatus Unmarshal<int64_t>(std::vector<int64_t>& data, const ajn::Ms
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_INT64_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_INT64_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_int64,
                     msgarg.v_scalarArray.v_int64 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -350,7 +381,8 @@ template <> QStatus Unmarshal<uint64_t>(std::vector<uint64_t>& data, const ajn::
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_UINT64_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_UINT64_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_uint64,
                     msgarg.v_scalarArray.v_uint64 + msgarg.v_scalarArray.numElements);
         status = ER_OK;
@@ -362,7 +394,8 @@ template <> QStatus Unmarshal<double>(std::vector<double>& data, const ajn::MsgA
 {
     QStatus status = ER_FAIL;
 
-    if ((ajn::ALLJOYN_DOUBLE_ARRAY == msgarg.typeId) && (0 == data.size())) {
+    if (ajn::ALLJOYN_DOUBLE_ARRAY == msgarg.typeId) {
+        data.clear();
         data.insert(data.begin(), msgarg.v_scalarArray.v_double,
                     msgarg.v_scalarArray.v_double + msgarg.v_scalarArray.numElements);
         status = ER_OK;

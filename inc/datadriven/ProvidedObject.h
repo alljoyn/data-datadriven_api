@@ -19,14 +19,17 @@
 
 #include <memory>
 #include <vector>
-#include <alljoyn/BusObject.h>
-#include <qcc/Debug.h>
-#define QCC_MODULE "DD_PROVIDER"
+
+#include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/MessageReceiver.h>
+
+#include <datadriven/ObjectAdvertiser.h>
+
+namespace test_unit_sessionmanager { class BasicTestObject; }
 
 namespace datadriven {
-class BusConnectionImpl;
-class BusConnection;
-class ProvidedInterface;   // forward
+class ProvidedObjectImpl;
+class ProvidedInterface;
 
 /**
  * \class ProvidedObject
@@ -48,8 +51,8 @@ class ProvidedInterface;   // forward
  * \code
  * class MyFooBar : public ProvidedObject, public FooInterface, public BarInterface {
  *   public:
- *     MyFooBar(BusConnection& conn) :
- *         ProvidedObject(conn),
+ *     MyFooBar(std::shared_ptr<ObjectAdvertiser> advertiser) :
+ *         ProvidedObject(advertiser),
  *         FooInterface(this),
  *         BarInterface(this)
  *     { ... }
@@ -60,8 +63,7 @@ class ProvidedInterface;   // forward
  *       the first base class specified, followed by the xyzInterface classes.
  */
 
-class ProvidedObject :
-    public ajn::BusObject {
+class ProvidedObject  {
   public:
     /*
      * The life cycle of a ProvidedObject
@@ -87,6 +89,11 @@ class ProvidedObject :
 
     /** Destructor */
     virtual ~ProvidedObject();
+
+    /** \private
+     * Get the implementation of the provided object.  Internal use only.
+     */
+    std::shared_ptr<ProvidedObjectImpl> GetImpl();
 
     /**
      * \brief Trigger simultaneous update notifications on all the interfaces implemented by this
@@ -117,36 +124,12 @@ class ProvidedObject :
      */
     ProvidedObject::State GetState();
 
-    /** \private
-     * Emits a signal (broadcast) across the communication layer
-     * \param[in] signal Member from an interface description on which the signal will be emitted
-     * \param[in] args List of input arguments to be taken by the Signal invocation.
-     * \param[in] numArgs Number of input arguments.
-     * \retval ER_OK on success
-     * \retval others on failure
-     */
-    QStatus EmitSignal(const ajn::InterfaceDescription::Member& signal,
-                       const ajn::MsgArg* args = NULL,
-                       size_t numArgs = 0);
-
-    /** \private
-     * Used when a reply needs to be send back as a response on an invoked method call
-     * \param[in] message Marshaled <em>response content</em> to be send back
-     * \param[in] args List of input arguments to be considered when sending the response
-     * \param[in] numArgs Number of input arguments.
-     * \retval ER_OK on success
-     * \retval others on failure
-     */
-    QStatus MethodReply(const ajn::Message& message,
-                        const ajn::MsgArg* args = NULL,
-                        size_t numArgs = 0);
-
     /** \private Callback handler structure */
     struct MethodCallbacks {
         int memberId;
-        MessageReceiver::MethodHandler handler;
+        ajn::MessageReceiver::MethodHandler handler;
         MethodCallbacks(int memberId,
-                        MessageReceiver::MethodHandler handler) :
+                        ajn::MessageReceiver::MethodHandler handler) :
             memberId(memberId), handler(handler) { };
     };
 
@@ -159,12 +142,6 @@ class ProvidedObject :
      * \retval others on failure
      */
     QStatus AddProvidedInterface(ProvidedInterface * iface, MethodCallbacks callbacks[], size_t numCallbacks);
-
-    /** \private
-     * Retrieves a list of interface names currently present in the ProvidedObject
-     * \param[in] out Vector containing the names of the current available interface names
-     */
-    void GetInterfaceNames(std::vector<qcc::String>& out) const;
 
     /**
      * \brief Get the object's <em>object path</em>.
@@ -179,10 +156,30 @@ class ProvidedObject :
     const char* GetPath() const;
 
     /** \private
-     * Retrieves a reference to the connection object with the underlying communication layer
-     * \return Connection object with the underlying communication layer
+     * Handle a bus request to read a property from this object.
+     *
+     * \param ifcName   Identifies the interface that the property is defined on
+     * \param propName  Identifies the the property to get
+     * \param[out] val  Returns the property value. The type of this value is the actual value
+     *                  type.
+     * \return the status of the action. ER_OK means everything went well.
      */
-    std::weak_ptr<BusConnectionImpl> GetBusConnection();
+    QStatus Get(const char* ifcName,
+                const char* propName,
+                ajn::MsgArg& val);
+
+    /** \private
+     * Handle a bus attempt to write a property value to this object.
+     *
+     * \param ifcName   Identifies the interface that the property is defined on
+     * \param propName  Identifies the the property to set
+     * \param val       The property value to set. The type of this value is the actual value
+     *                  type.
+     * \return the status of the action. ER_OK means everything went well.
+     */
+    QStatus Set(const char* ifcName,
+                const char* propName,
+                ajn::MsgArg& val);
 
   protected:
     /**
@@ -191,14 +188,14 @@ class ProvidedObject :
      * This variant of the constructor allows for the explicit specification of
      * an object path. In many cases, you should not care about the object
      * path, and let the Data-driven API generate one for you by using the
-     * ProvidedObject::ProvidedObject(BusConnection&) constructor.
+     * ProvidedObject::ProvidedObject(std::shared_ptr<ObjectAdvertiser>) constructor.
      *
      * \see ProvidedObject::GetPath
      *
-     * \param[in] busConnection the BusConnection that will host the object.
-     * \param[in] path the object path
+     * \param[in] advertiser The advertiser to be used for advertising the object.
+     * \param[in] path The object path.
      */
-    ProvidedObject(BusConnection& busConnection,
+    ProvidedObject(std::shared_ptr<ObjectAdvertiser> advertiser,
                    const qcc::String& path);
 
     /**
@@ -207,30 +204,26 @@ class ProvidedObject :
      * This variant of the constructor will auto-generate an object path. This
      * is the recommended way of working. If you want control over the object
      * path, use the
-     * ProvidedObject::ProvidedObject(BusConnection&, const qcc::String&)
+     * ProvidedObject::ProvidedObject(std::shared_ptr<ObjectAdvertiser>, const qcc::String&)
      * constructor.
      *
-     * \param[in] busConnection the BusConnection that will host the object.
+     * \param[in] advertiser The advertiser to be used for advertising the object.
      */
-    ProvidedObject(BusConnection& busConnection);
+    ProvidedObject(std::shared_ptr<ObjectAdvertiser> advertiser);
 
   private:
     /* unfortunately BusObject does not expose its interfaces.
      * Maybe in the future we can change this at BusObject level and then we don't need to store it ourselves.. */
-    friend class BusConnectionImpl;
-    std::vector<const ProvidedInterface*> interfaces;
-    std::weak_ptr<BusConnectionImpl> busConnectionImpl;
-    ProvidedObject::State state;
-    void Register();
+    std::map<qcc::String, const ProvidedInterface*> interfaces;
+    std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl;
+    std::shared_ptr<ProvidedObjectImpl> providedObjectImpl;
 
-    void CallMethodHandler(ajn::MessageReceiver::MethodHandler handler,
-                           const ajn::InterfaceDescription::Member* member,
-                           ajn::Message& message,
-                           void* context);
-
-    static qcc::String GeneratePath();
-
-    class MethodHandlerTaskData;
+    /**
+     * \private
+     * Check if a certain interface is provided by this object.
+     * \return the ProvidedInterface with a given \a name or NULL otherwise
+     */
+    const ProvidedInterface* GetInterfaceByName(const char* name);
 };
 }
 

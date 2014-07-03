@@ -22,7 +22,7 @@ if [ -z ${AJ_ROOT} ]; then
     AJ_ROOT="${SELF_DIR}/../../.."
 fi
 
-AJN_DD_PATH="${SELF_DIR}/.."
+AJN_DD_PATH=$(cd "${SELF_DIR}/.." > /dev/null; pwd)
 
 
 AJN_DAEMON_PNAME="alljoyn-daemon"
@@ -38,9 +38,23 @@ else
 fi
 
 PLATFORM_ROOT="${AJN_DD_PATH}/build/linux/${PLATFORM}/${VARIANT}"
-TEST_ROOT="${PLATFORM_ROOT}/test/unit"
+OBJ_ROOT="${PLATFORM_ROOT}/obj/datadriven_cpp"
 
-if ! nm "${TEST_ROOT}/ajctest" | grep BundledRouter &> /dev/null; then
+LIB_PATH="${PLATFORM_ROOT}/dist/datadriven_cpp/lib:${PLATFORM_ROOT}/dist/cpp/lib:${PLATFORM_ROOT}/dist/about/lib:${PLATFORM_ROOT}/dist/services_common/lib"
+
+export LD_LIBRARY_PATH="${LIB_PATH}"
+
+# make sure coverage starts clean
+if [ ! -z "$(which lcov)" ]; then
+    lcov --directory "${PLATFORM_ROOT}" --zerocounters
+fi
+
+# running unit tests
+# we are doing some magic here to run each test in its own process as we still have some issues to run them in one go (AS-207)
+echo "[[ Cleaning old Gtest results if any ]]"
+UNITTEST_ROOT="${OBJ_ROOT}/unit_test"
+
+if ! nm "${UNITTEST_ROOT}/ddtest" | grep BundledRouter &> /dev/null; then
     if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
          echo "alljoyn-daemon is active...running tests..."
     else
@@ -49,40 +63,41 @@ if ! nm "${TEST_ROOT}/ajctest" | grep BundledRouter &> /dev/null; then
     fi
 fi
 
-LIB_PATH="${PLATFORM_ROOT}/lib:${AJ_ROOT}/core/alljoyn/build/linux/${PLATFORM}/${VARIANT}/dist/cpp/lib:${AJ_ROOT}/core/alljoyn/build/linux/${PLATFORM}/${VARIANT}/dist/about/lib:${AJ_ROOT}/core/alljoyn/build/linux/${PLATFORM}/${VARIANT}/dist/services_common/lib"
-
-export LD_LIBRARY_PATH="${LIB_PATH}"
-
-# make sure coverage starts clean
-if [ ! -z "$(which lcov)" ]; then
-    lcov --directory ${PLATFORM_ROOT} --zerocounters
-fi
-
-# running unit tests
-# we are doing some magic here to run each test in its own process as we still have some issues to run them in one go (AS-207)
-echo "[[ Cleaning old Gtest results if any ]]"
-rm -rf "${TEST_ROOT}"/gtestresults/
+rm -rf "${UNITTEST_ROOT}"/gtestresults/
 echo "[[ Running unit tests ]]"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-"${TEST_ROOT}"/ajctest --gtest_list_tests | awk -f "${DIR}/parse_list_tests.awk" | while read line
+"${UNITTEST_ROOT}"/ddtest --gtest_list_tests | awk -f "${DIR}/parse_list_tests.awk" | while read line
 do
-    "${TEST_ROOT}"/ajctest --gtest_filter=$line --gtest_output=xml:"${TEST_ROOT}"/gtestresults/ || exit 1
+    "${UNITTEST_ROOT}"/ddtest --gtest_output=xml:"${UNITTEST_ROOT}"/gtestresults/ --gtest_filter=$line || exit 1
 done
 
 # running system tests
 echo "[[ Running system tests ]]"
-"${PLATFORM_ROOT}"/test/system/all_types/run.sh || exit 1
-"${PLATFORM_ROOT}"/test/system/methods/run.sh || exit 1
-"${PLATFORM_ROOT}"/test/system/multi_peer/run.sh || exit 1
+SYSTEST_ROOT="${OBJ_ROOT}/test"
+for dir in $(ls "${SYSTEST_ROOT}"); do
+    if [ -x "${SYSTEST_ROOT}/${dir}"/run.sh ]; then
+        echo "[[[[ ${dir} ]]]]"
+        "${SYSTEST_ROOT}/${dir}"/run.sh || exit 1
+    fi
+done
 
-# generate coverage report (lcov 1.10 or better required)
+echo "[[ Running hybrid test ]]"
+RUNTEST=1 "${PLATFORM_ROOT}"/dist/datadriven_cpp/bin/samples/hybriddoor_cons_prov home office school || exit 1
+
+
+# generate coverage report (lcov 1.10 or better required for --no-external)
 if [ ! -z "$(which lcov)" ]; then
     if [ $(lcov --version | cut -d'.' -f2) -ge 10 ]; then
-        COVDIR=${AJN_DD_PATH}/build/coverage
-        mkdir -p ${COVDIR} > /dev/null 2>&1
-        lcov --quiet --capture --base-directory ${AJN_DD_PATH}/src --directory ${PLATFORM_ROOT}/lib --no-external --output-file ${COVDIR}/ddapi.info
-        genhtml --quiet --output-directory ${COVDIR} ${COVDIR}/ddapi.info
+        EXTRA_ARGS="--no-external"
     fi
+    COVDIR="${AJN_DD_PATH}"/build/coverage
+    mkdir -p "${COVDIR}" > /dev/null 2>&1
+
+    lcov $EXTRA_ARGS --quiet --capture \
+         --base-directory "${AJN_DD_PATH}" \
+         --directory "${PLATFORM_ROOT}"/obj/datadriven_cpp/lib/ \
+         --output-file "${COVDIR}"/ddapi.info
+    genhtml --prefix "${PLATFORM_ROOT}" --quiet --output-directory "${COVDIR}" "${COVDIR}"/ddapi.info || true
 fi
 
 exit 0

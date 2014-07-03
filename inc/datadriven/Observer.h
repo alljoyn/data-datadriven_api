@@ -17,14 +17,20 @@
 #ifndef OBSERVER_H_
 #define OBSERVER_H_
 
-#include <datadriven/datadriven.h>
+#include <iterator>
 #include <memory>
-#include "ObserverImpl.h"
+
+#include <qcc/String.h>
+
+#include <datadriven/SignalListener.h>
+#include <datadriven/ObserverBase.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_CONSUMER"
 
 namespace datadriven {
+template <typename T, typename Signal> class SignalListener;
+
 /**
  * \class Observer
  * \brief Discovers and provides access to all objects implementing a given
@@ -104,7 +110,7 @@ namespace datadriven {
  *   holds a reference to the proxy object.
  */
 template <typename T> class Observer :
-    private ObserverImpl {
+    public ObserverBase {
   public:
 
     /**
@@ -121,8 +127,7 @@ template <typename T> class Observer :
      * - Listener::OnRemove is invoked whenever a previously discovered object
      *   is removed from the bus.
      */
-    class Listener :
-        public ObserverImpl::Listener {
+    class Listener {
       public:
         /**
          * \brief Invoked whenever a new object is discovered, or an already
@@ -145,6 +150,32 @@ template <typename T> class Observer :
          * \param[in] obj Proxy object
          */
         virtual void OnRemove(const std::shared_ptr<T>& obj) { };
+
+        Listener() { }
+
+        virtual ~Listener() { }
+    };
+
+    /**
+     * \brief Factory method for creating a new observer.
+     *
+     * \param[in] listener Notification handler for property changes and changes to discovered objects<br>
+     *                     A NULL value will discard any detected property and discovered object changes.
+     * \param[in] bus The (optional) AllJoyn BusAttachment to be used for interactions with the bus.  If
+     *                not provided one will be created.
+     * \return The newly created Observer or a \c nullptr
+     */
+    static std::shared_ptr<Observer<T> > Create(Listener* listener, ajn::BusAttachment* bus = nullptr)
+    {
+        std::shared_ptr<Observer<T> > observer = std::shared_ptr<Observer<T> >(new Observer<T>(listener, bus));
+        if (ER_OK == observer->GetStatus()) {
+            if (ER_OK != observer->SetRefCountedPtr(observer)) {
+                observer.reset();
+            }
+        } else {
+            observer.reset();
+        }
+        return observer;
     };
 
     /**
@@ -167,20 +198,31 @@ template <typename T> class Observer :
         public std::iterator<std::input_iterator_tag, T>{
       public:
         /**
-         * Copy constructor
-         * \param[in] it Iterator to copy from
+         * Default constructor for empty iterator.
          */
-        iterator(const iterator& it) :
-            it(it.it) { };
+        iterator() :
+            objects(),
+            it(objects.end())
+        { }
+
+        /**
+         * Copy constructor
+         * \param[in] _it Iterator to copy from
+         */
+        iterator(const iterator& _it) :
+            objects(_it.objects),
+            it(objects.begin() + std::distance(_it.objects.begin(), _it.it))
+        { };
 
         /**
          * Assignment operator
-         * \param[in] it Iterator to copy contents from
+         * \param[in] _it Iterator to copy contents from
          * \return Reference to the iterator
          */
-        iterator& operator=(const iterator& it)
+        iterator& operator=(const iterator& _it)
         {
-            this->it = it.it;
+            objects = _it.objects;
+            it = objects.begin() + std::distance(_it.objects.begin(), _it.it);
             return *this;
         };
 
@@ -201,29 +243,40 @@ template <typename T> class Observer :
          */
         iterator operator++(int x)
         {
-            return it++;
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
         }
 
         /**
          * Compare iterators for equality
-         * \param[in] it Iterator to compare with
+         * \param[in] _it Iterator to compare with
          * \retval true if both iterators point to the same object
          * \retval false if the iterators are different
          */
-        bool operator==(const iterator& it) const
+        bool operator==(const iterator& _it) const
         {
-            return this->it == it.it;
+            if (0 == objects.size()) {
+                return (_it.objects.size() == 0) || (_it.objects.end() == _it.it);
+            }
+            if (0 == _it.objects.size()) {
+                return (objects.end() == it);
+            }
+            return (it == _it.it);
         }
 
         /**
          * Compare iterators for inequality
-         * \param[in] it Iterator to compare with
+         * \param[in] _it Iterator to compare with
          * \retval true if the iterators are different
          * \retval false if both iterators point to the same object
          */
-        bool operator!=(const iterator& it) const
+        bool operator!=(const iterator& _it) const
         {
-            return this->it != it.it;      /* wouldn't it make sense to first compare the pointers ? */
+            if (this != &_it) {
+                return !(*this == _it);
+            }
+            return false;
         }
 
         /**
@@ -250,22 +303,17 @@ template <typename T> class Observer :
          */
         static iterator end()
         {
-            return iterator(ObserverImpl::iterator::end());
+            return iterator();
         }
 
         friend class Observer<T>;
 
       private:
-        ObserverImpl::iterator it;
-
-        iterator() :
-            it() { }
-
-        iterator(const ObserverImpl::iterator it) :
-            it(it) { }
+        std::vector<std::shared_ptr<ProxyInterface> > objects;
+        std::vector<std::shared_ptr<ProxyInterface> >::const_iterator it;
 
         iterator(const Observer& observer) :
-            it(observer) { }
+            objects(observer.GetObjects()), it(objects.begin()) { }
     };
 
     /**
@@ -297,10 +345,7 @@ template <typename T> class Observer :
      */
     template <typename S> QStatus AddSignalListener(SignalListener<T, S>& l)
     {
-        l.SetObserver(*this);
-        l.SetMember(const_cast<ajn::InterfaceDescription::Member*>(&S::GetMember(ObserverImpl::
-                                                                                 GetRegisteredTypeDescription())));
-        return ObserverImpl::AddSignalListener(&l);
+        return ObserverBase::AddSignalListener(&l, S::GetMemberNumber());
     }
 
     /**
@@ -314,7 +359,7 @@ template <typename T> class Observer :
      */
     template <typename S> QStatus RemoveSignalListener(SignalListener<T, S>& l)
     {
-        return ObserverImpl::RemoveSignalListener(&l);
+        return ObserverBase::RemoveSignalListener(&l);
     }
 
     /**
@@ -322,9 +367,9 @@ template <typename T> class Observer :
      * \param objId the discovered object's ObjectId.
      * \return Shared pointer to the proxy object.
      */
-    std::shared_ptr<T> Get(const ObjectId& objId)
+    std::shared_ptr<T> GetObject(const ObjectId& objId)
     {
-        return CastToTPtr(ObserverImpl::Get(objId));
+        return CastToTPtr(ObserverBase::GetObject(objId));
     }
 
     /** \private
@@ -334,28 +379,13 @@ template <typename T> class Observer :
      */
     std::shared_ptr<T> Get(const ajn::Message& message)
     {
-        return CastToTPtr(ObserverImpl::Get(message));
-    }
-
-    /**
-     * \brief Constructor.
-     *
-     * Post construction, the application should check Observer::GetStatus to
-     * ascertain that the construction and initialisation of the Observer were
-     * successful.
-     *
-     * \param[in] busConnection Connection to the AllJoyn bus.
-     * \param[in] listener Notification handler for property changes and changes to discovered objects<br>
-     *                     A NULL value will discard any detected property and discovered object changes.
-     */
-    Observer(BusConnection& busConnection,
-             Listener* listener) :
-        ObserverImpl(busConnection, T::Type::GetInstance()), propertiesListener(*this), interfaceListener(listener)
-    {
-        if (NULL != listener) {
-            ObserverImpl::AddListener(*listener);
+        ObjectId* objId = GetObjectId(message);
+        if (nullptr != objId) {
+            std::shared_ptr<T> proxy = CastToTPtr(GetObject(*objId));
+            delete objId;
+            return proxy;
         }
-        AddSignalListener(propertiesListener);
+        return nullptr;
     }
 
     /**
@@ -365,12 +395,7 @@ template <typename T> class Observer :
      * this Observer when the Observer object is destroyed.
      */
     ~Observer()
-    {
-        RemoveSignalListener(propertiesListener);
-        if (NULL != interfaceListener) {
-            ObserverImpl::RemoveListener(*interfaceListener);
-        }
-    }
+    { }
 
     /**
      * \brief Reports whether the Observer is successfully constructed and
@@ -380,61 +405,83 @@ template <typename T> class Observer :
      */
     QStatus GetStatus() const
     {
-        return ObserverImpl::GetStatus();
+        return ObserverBase::GetStatus();
     }
 
   private:    /*Observer's private members */
+    /**
+     * \brief Constructor.
+     *
+     * \param[in] listener Notification handler for property changes and changes to discovered objects<br>
+     *                     A NULL value will discard any detected property and discovered object changes.
+     * \param[in] bus The (optional) AllJoyn BusAttachment to be used for interactions with the bus.  If
+     *                not provided one will be created.
+     */
+    Observer(Observer::Listener* listener,
+             ajn::BusAttachment* bus = nullptr) :
+        ObserverBase(T::Type::GetInstance(), bus),
+        interfaceListener(listener)
+    { }
+
     static std::shared_ptr<T> CastToTPtr(const std::shared_ptr<ProxyInterface>& objProxy)
     {
         return std::static_pointer_cast<T>(objProxy);
     }
 
-    static void UpdateCB(ObserverImpl::Listener& l, const std::shared_ptr<ProxyInterface>& objProxy)
+    ProxyInterface* Alloc(const ObjectId& objId)
     {
-        static_cast<Listener&>(l).OnUpdate(CastToTPtr(objProxy));
-    }
-
-    static void RemoveCB(ObserverImpl::Listener& l, const std::shared_ptr<ProxyInterface>& objProxy)
-    {
-        static_cast<Listener&>(l).OnRemove(CastToTPtr(objProxy));
-    }
-
-    void NotifyUpdate(const std::shared_ptr<T>& objProxy) const
-    {
-        /* Trigger UpdateCB on all listeners */
-        Notify(objProxy, &UpdateCB);
-    }
-
-    void NotifyRemove(const std::shared_ptr<ProxyInterface>& objProxy)
-    {
-        /* Trigger RemoveCB on all listeners */
-        Notify(objProxy, &RemoveCB);
-    }
-
-    ProxyInterface* Alloc(const ObjectId& objId) const
-    {
-        return new T(ObserverImpl::GetRegisteredTypeDescription(), objId);
-    }
-
-    class PropertiesUpdateSignalListener :
-        public datadriven::SignalListener<T, typename T::PropertiesUpdate> {
-      public:
-        PropertiesUpdateSignalListener(const Observer<T>& observer) :
-            observer(observer) { }
-
-        void OnSignal(const typename T::PropertiesUpdate& signal)
-        {
-            std::shared_ptr<T> obj = signal.GetEmitter();
-            obj->SetProperties(signal.properties);
-            observer.NotifyUpdate(obj);
+        ProxyInterface* proxy = new T(ObserverBase::GetRegisteredTypeDescription(), objId);
+        if (nullptr != proxy) {
+            proxy->RegisterPropertiesChangedHandler(this);
+            proxy->UpdateProperties();
+            QStatus status = proxy->GetStatus();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Observer => AddObject: Failed to unmarshal properties"));
+            }
         }
+        return proxy;
+    }
 
-      private:
-        const Observer<T>& observer;
-    };
+    void AddObject(const std::shared_ptr<ProxyInterface>& objProxy)
+    {
+        if (nullptr != interfaceListener) {
+            QCC_DbgPrintf(("Observer => AddObject called"));
+            const std::shared_ptr<T> proxy = CastToTPtr(objProxy);
+            if (nullptr == proxy) {
+                QCC_LogError(ER_FAIL, ("Observer => AddObject: Failed to add proxy object"));
+            } else {
+                interfaceListener->OnUpdate(proxy);
+            }
+        }
+    }
 
-    PropertiesUpdateSignalListener propertiesListener;
-    Listener* interfaceListener;
+    void RemoveObject(const std::shared_ptr<ProxyInterface>& objProxy)
+    {
+        if (nullptr != interfaceListener) {
+            QCC_DbgPrintf(("Observer => RemoveObject called"));
+            const std::shared_ptr<T> proxy = CastToTPtr(objProxy);
+            if (nullptr == proxy) {
+                QCC_LogError(ER_FAIL, ("Observer => RemoveObject: Failed to remove proxy object"));
+            } else {
+                interfaceListener->OnRemove(proxy);
+            }
+        }
+    }
+
+    void UpdateObject(const std::shared_ptr<ProxyInterface>& objProxy)
+    {
+        if (nullptr != interfaceListener) {
+            QCC_DbgPrintf(("Observer => UpdateObject called"));
+            const std::shared_ptr<T> proxy = CastToTPtr(objProxy);
+            if (nullptr == proxy) {
+                QCC_LogError(ER_FAIL, ("Observer => UpdateObject: Failed to update proxy object"));
+            } else {
+                interfaceListener->OnUpdate(proxy);
+            }
+        }
+    }
+
+    Observer::Listener* interfaceListener;
 };
 }
 

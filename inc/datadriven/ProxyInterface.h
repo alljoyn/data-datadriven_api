@@ -17,12 +17,14 @@
 #ifndef PROXYINTERFACE_H_
 #define PROXYINTERFACE_H_
 
-#include <datadriven/ObjectId.h>
-#include <qcc/Debug.h>
+#include <vector>
+
+#include <qcc/Mutex.h>
+
 #include <alljoyn/Status.h>
 #include <alljoyn/ProxyBusObject.h>
-#include <qcc/Mutex.h>
-#define QCC_MODULE "DD_CONSUMER"
+
+#include <datadriven/ObjectId.h>
 
 namespace ajn {
 class ProxyBusObject;
@@ -92,10 +94,24 @@ class ProxyInterface {
      */
     bool IsAlive() const;
 
+    /** \private
+     * Method to populate/update the cached values.
+     *
+     * \param[in] values An optional property name/value-dictionary (signature = "a{sv}").
+     */
+    void UpdateProperties(const ajn::MsgArg* values = nullptr);
+
     /**
      * \brief Destructor
      */
     virtual ~ProxyInterface();
+
+    /** \private
+     * Register to be notified of property changes.
+     *
+     * \param[in] listener The object implementing the PropertiesChangedListener interface.
+     */
+    QStatus RegisterPropertiesChangedHandler(ajn::ProxyBusObject::PropertiesChangedListener* listener);
 
   protected:
     /** \private
@@ -103,24 +119,78 @@ class ProxyInterface {
      */
     ProxyInterface(const RegisteredTypeDescription& desc,
                    const ObjectId& objId);
+
     /** \private */
     const RegisteredTypeDescription& GetTypeDescription() const;
+
+    /** \private
+     * Called to unmarshal a single property.  This method will be implemented
+     * by the generated code.
+     *
+     * \param[in] name The property name
+     * \param[in] value The property value
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    virtual QStatus UnmarshalProperty(const char* name,
+                                      const ajn::MsgArg& value) = 0;
+
+    /**
+     * \private
+     * \brief Get the value of a property on an interface
+     *
+     * \param[in]  propName The name of the property to get
+     * \param[out] value The value of the property
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus Get(const char* propName,
+                ajn::MsgArg& value) const;
+
+    /**
+     * \private
+     * \brief Set the value of a property on an interface
+     *
+     * \param[in] propName The name of the property to set
+     * \param[in] value The value of the property
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus Set(const char* propName,
+                const ajn::MsgArg& value) const;
 
   private:
     QStatus status;
     const RegisteredTypeDescription& desc;
+    qcc::String ifaceName;
+    std::vector<const char*> propNames;
     ObjectId objId;
     ajn::ProxyBusObject proxyBusObject;
-    bool alive;   /* alternatively we could retrieve this from the readercache */
+    bool alive;   /* alternatively we could retrieve this from the reader cache */
     mutable qcc::Mutex mutex;
 
-    template <typename> friend class MethodInvocation;
+    ajn::ProxyBusObject::PropertiesChangedListener* propChangedListener;
+
+    friend class MethodInvocationBase;
     friend class ObserverCache;
+
+    /**
+     * \brief Get the values of all properties on an interface
+     *
+     * \param[out] value The values of the properties
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus GetAll(ajn::MsgArg& values) const;
 
     /** \internal Observer will call this function to mark the object as alive/dead */
     void SetAlive(bool _alive);
 
-    /** \internal Needed by MethodInvocation to to perform methodcall at AJN level */
+    /** \internal Needed by MethodInvocation to to perform method call at AJN level */
     const ajn::ProxyBusObject& GetProxyBusObject() const;
 
     /** A proxy interface should not be copyable **/

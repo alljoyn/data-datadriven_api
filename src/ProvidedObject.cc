@@ -15,163 +15,50 @@
  ******************************************************************************/
 
 #include <datadriven/ProvidedObject.h>
-#include <datadriven/BusConnection.h>
-#include "BusConnectionImpl.h"
-#include <qcc/GUID.h>
-#include "ProviderCache.h"
-#include "ProviderSessionManager.h"
+#include <datadriven/ProvidedInterface.h>
+
+#include "ObjectAdvertiserImpl.h"
+#include "ProvidedObjectImpl.h"
+#include "RegisteredTypeDescription.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 
 namespace datadriven {
-class ProvidedObject::MethodHandlerTaskData :
-    public BusConnectionImpl::BusConnTaskData {
-  private:
-    std::weak_ptr<BusConnectionImpl> busConnectionImpl;
-    ProvidedObject* provider;
-    ajn::MessageReceiver* ctx;
-    ajn::MessageReceiver::MethodHandler handler;
-    const ajn::InterfaceDescription::Member* member;
-    ajn::Message message;
-
-  public:
-    MethodHandlerTaskData(std::weak_ptr<BusConnectionImpl> _busConnectionImpl,
-                          ProvidedObject* _provider,
-                          ajn::MessageReceiver* _ctx,
-                          ajn::MessageReceiver::MethodHandler _handler,
-                          const ajn::InterfaceDescription::Member* _member,
-                          ajn::Message& _message) :
-        busConnectionImpl(_busConnectionImpl), provider(_provider), ctx(_ctx), handler(_handler), member(_member),
-        message(_message) { }
-
-    virtual void Execute(const BusConnTaskData* td) const
-    {
-        std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-        if (busConn) {
-            const MethodHandlerTaskData* mhtd = static_cast<const MethodHandlerTaskData*>(td);
-            QStatus result = busConn->LockForProvidedObject(mhtd->provider);
-
-            if (ER_OK == result) {
-                (mhtd->ctx->*mhtd->handler)(mhtd->member, const_cast<ajn::Message&>(mhtd->message));
-                busConn->UnlockProvidedObject();
-            }
-        }
-    }
-};
-
-ProvidedObject::ProvidedObject(BusConnection& busConnection,
+ProvidedObject::ProvidedObject(std::shared_ptr<ObjectAdvertiser> objectAdvertiser,
                                const qcc::String& path) :
-    BusObject(path.c_str()), busConnectionImpl(busConnection.busConnectionImpl), state(ProvidedObject::CONSTRUCTED)
+    objectAdvertiserImpl(objectAdvertiser->GetImpl()),
+    providedObjectImpl(new ProvidedObjectImpl(objectAdvertiser->GetImpl(), path, *this))
 {
+    providedObjectImpl->SetRefCountedPtr(providedObjectImpl);
 }
 
-ProvidedObject::ProvidedObject(BusConnection& busConnection) :
-    BusObject(GeneratePath().c_str()), busConnectionImpl(busConnection.busConnectionImpl),
-    state(ProvidedObject::CONSTRUCTED)
+ProvidedObject::ProvidedObject(std::shared_ptr<ObjectAdvertiser> objectAdvertiser) :
+    objectAdvertiserImpl(objectAdvertiser->GetImpl()),
+    providedObjectImpl(new ProvidedObjectImpl(objectAdvertiser->GetImpl(), *this))
 {
+    providedObjectImpl->SetRefCountedPtr(providedObjectImpl);
 }
 
 ProvidedObject::~ProvidedObject()
 {
-    if (state == ProvidedObject::REGISTERED) {
-        std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-        if (busConn) {
-            busConn->RemoveProvidedObject(this);
-        }
-        state = ProvidedObject::REMOVED;
-    }
+    RemoveFromBus();
 }
 
-qcc::String ProvidedObject::GeneratePath()
+std::shared_ptr<ProvidedObjectImpl> ProvidedObject::GetImpl()
 {
-    return "/O" + qcc::GUID128().ToString();
-}
-
-void ProvidedObject::Register()
-{
-    if (ProvidedObject::REGISTERED != state) {
-        std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-        if (busConn) {
-            QStatus result = busConn->AddProvidedObject(this);
-
-            if (ER_OK == result) {
-                state = ProvidedObject::REGISTERED;
-            } else {
-                state = ProvidedObject::ERROR;
-            }
-        }
-    }
-}
-
-void ProvidedObject::CallMethodHandler(ajn::MessageReceiver::MethodHandler handler,
-                                       const ajn::InterfaceDescription::Member* member,
-                                       ajn::Message& message,
-                                       void* context)
-{
-    ajn::MessageReceiver* ctxObject = static_cast<ajn::MessageReceiver*>(context);
-    std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-    if (busConn) {
-        busConn->ProviderAsyncEnqueue(new MethodHandlerTaskData(busConnectionImpl,
-                                                                this,
-                                                                ctxObject,
-                                                                handler,
-                                                                member,
-                                                                message));
-    }
+    return providedObjectImpl;
 }
 
 void ProvidedObject::RemoveFromBus()
 {
-    if (state == ProvidedObject::REGISTERED) {
-        std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-        if (busConn) {
-            busConn->RemoveProvidedObject(this);
-        }
-        state = ProvidedObject::REMOVED;
-    }
+    // Remove BusObject from Alljoyn bus
+    providedObjectImpl->RemoveFromBus();
 }
 
 ProvidedObject::State ProvidedObject::GetState()
 {
-    return state;
-}
-
-QStatus ProvidedObject::EmitSignal(const ajn::InterfaceDescription::Member& signal,
-                                   const ajn::MsgArg* args,
-                                   size_t numArgs)
-{
-    QStatus status = ER_FAIL;
-    if (ProvidedObject::REGISTERED != state) {
-        /* Actually BusObject::Signal() should return a proper error message, but it does not.
-         * After two failed attempts to fix this at BusObject level
-         * (1st attempt: by setting isRegistered as a check in BusObject::Signal() --> lead to race condition
-         *  2nd attempt: by setting bus = NULL in BusObject::ObjectUnregistered() --> lead to assert in AJN unit test )
-         * we decided to fix it here for now */
-        QCC_LogError(ER_BUS_OBJECT_NOT_REGISTERED, ("Cannot signal on an object that is not exposed on the bus"));
-        return ER_BUS_OBJECT_NOT_REGISTERED;
-    }
-
-    std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-    if (busConn) {
-        ProviderSessionManager& providerSessionManager = busConn->GetProviderSessionManager();
-        if (ER_OK != providerSessionManager.GetStatus()) {
-            QCC_LogError(ER_FAIL, ("Trying to emit signal with an improperly initialized provider session manager"));
-            return ER_FAIL;
-        }
-        status = providerSessionManager.BusObjectSignal(*this, signal.iface->GetName(), &signal, args, numArgs);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to emit signal"));
-        }
-    }
-    return status;
-}
-
-QStatus ProvidedObject::MethodReply(const ajn::Message& msg,
-                                    const ajn::MsgArg* args,
-                                    size_t numArgs)
-{
-    return BusObject::MethodReply(msg, args, numArgs);
+    return (ProvidedObject::State)providedObjectImpl->GetState();
 }
 
 QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterface,
@@ -186,29 +73,32 @@ QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterfac
         return status;
     }
 
-    std::shared_ptr<BusConnectionImpl> busConn = busConnectionImpl.lock();
-    if (busConn) {
-        ProviderSessionManager& providerSessionManager = busConn->GetProviderSessionManager();
-        if (ER_OK != providerSessionManager.GetStatus()) {
+    std::shared_ptr<ObjectAdvertiserImpl> advertiser = objectAdvertiserImpl.lock();
+    if (advertiser) {
+        if (ER_OK != advertiser->GetStatus()) {
             status = ER_FAIL;
-            QCC_LogError(status, ("Provider session manager not properly initialized"));
+            QCC_LogError(status, ("Object advertiser not properly initialized"));
             return status;
         }
 
-        status = providedInterface->RegisterInterface(providerSessionManager.GetBusAttachment());
+        status = providedInterface->Register(advertiser->GetBusAttachment());
         const RegisteredTypeDescription* reg = providedInterface->GetRegisteredTypeDescription();
         if (status == ER_OK) {
-            status = BusObject::AddInterface(reg->GetInterfaceDescription());
+            status = providedObjectImpl->AddInterfaceToBus(reg->GetInterfaceDescription());
             if (status == ER_OK) {
-                interfaces.push_back(providedInterface);
+                qcc::String ifName = reg->GetDescription().GetName();
+
+                interfaces[ifName] = providedInterface;
+                // Update
+                providedObjectImpl->AddInterfaceName(ifName);
             }
-            busConn->RegisterTypeDescription(reg);
         }
 
         if (ER_OK == status) {
             for (size_t i = 0; (ER_OK == status) && (i < numHandlers); ++i) {
                 MethodCallbacks& mh = handlers[i];
-                status = BusObject::AddMethodHandler(&reg->GetMember(mh.memberId), mh.handler, providedInterface);
+                status = providedObjectImpl->AddMethodHandlerToBus(&reg->GetMember(
+                                                                       mh.memberId), mh.handler, providedInterface);
             }
         }
     }
@@ -218,37 +108,45 @@ QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterfac
     return status;
 }
 
-void ProvidedObject::GetInterfaceNames(std::vector<qcc::String>& out) const
-{
-    for (std::vector<const ProvidedInterface*>::const_iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
-        out.push_back((*it)->GetTypeDescription()->GetName());
-    }
-}
-
 const char* ProvidedObject::GetPath() const
 {
-    ProvidedObject* po = const_cast<ProvidedObject*>(this);       /* We have to const_cast because BusObject::GetPath() does not have const qualifier */
-    return po->BusObject::GetPath();
-}
-
-std::weak_ptr<BusConnectionImpl> ProvidedObject::GetBusConnection()
-{
-    return busConnectionImpl;
+    return providedObjectImpl->GetPath();
 }
 
 QStatus ProvidedObject::UpdateAll()
 {
-    QStatus status = ER_OK;
-    Register();
-    if (ProvidedObject::ERROR == state) {
-        QCC_LogError(ER_FAIL, ("Failed as the object is in error/unregistered state"));
-        return ER_FAIL;
+    QStatus status;
+
+    /**
+     * The correct sequence to ensure data validity at all times is the following
+     * - MarshalAllProperties
+     * - Register the object to the bus
+     * - Send the PropertiesChanged signal
+     *
+     * The announcement of the object will be seen by consumer, which will then GetallProperties.
+     * Therefore we must make sure that the data is already marshaled.
+     */
+
+    // Marshal all properties of all provided interfaces of the object
+    std::map<qcc::String, const ProvidedInterface*>::iterator it = interfaces.begin();
+    std::map<qcc::String, const ProvidedInterface*>::iterator endit = interfaces.end();
+    for (; it != endit; ++it) {
+        ProvidedInterface* intf = const_cast<ProvidedInterface*>(it->second);
+        if (ER_OK != (status = intf->MarshalProperties())) {
+            return status;
+        }
     }
 
-    std::vector<const ProvidedInterface*>::iterator it = interfaces.begin();
-    std::vector<const ProvidedInterface*>::iterator endit = interfaces.end();
-    for (; it != endit; ++it) {
-        ProvidedInterface* intf = const_cast<ProvidedInterface*>(*it);
+    // Register the object on the bus
+    status = providedObjectImpl->Register();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed as the object is in error/unregistered state"));
+        return status;
+    }
+
+    // Call the propertiesChanged signal for all provided interfaces of the object
+    for (it = interfaces.begin(); it != endit; ++it) {
+        ProvidedInterface* intf = const_cast<ProvidedInterface*>(it->second);
         status = intf->Update();
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to update for a given interface"));
@@ -261,5 +159,35 @@ QStatus ProvidedObject::UpdateAll()
 QStatus ProvidedObject::PutOnBus()
 {
     return UpdateAll();
+}
+
+const ProvidedInterface* ProvidedObject::GetInterfaceByName(const char* name)
+{
+    std::map<qcc::String, const ProvidedInterface*>::const_iterator it = interfaces.find(qcc::String(name));
+
+    if (it != interfaces.end()) {
+        return it->second;
+    }
+    return NULL;
+}
+
+QStatus ProvidedObject::Get(const char* ifcName, const char* propName, ajn::MsgArg& val)
+{
+    QStatus status = ER_FAIL;
+    ProvidedInterface* intf = const_cast<ProvidedInterface*>(GetInterfaceByName(ifcName));
+    if (NULL != intf) {
+        status = intf->GetProperty(propName, val);
+    }
+    return status;
+}
+
+QStatus ProvidedObject::Set(const char* ifcName, const char* propName, ajn::MsgArg& val)
+{
+    QStatus status = ER_FAIL;
+    ProvidedInterface* intf = const_cast<ProvidedInterface*>(GetInterfaceByName(ifcName));
+    if (NULL != intf) {
+        status = intf->SetProperty(propName, val);
+    }
+    return status;
 }
 }

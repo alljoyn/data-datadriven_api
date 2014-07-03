@@ -20,16 +20,22 @@
 #include <map>
 #include <vector>
 #include <memory>
+
 #include <qcc/String.h>
+
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
+
 #include <datadriven/ObjectPath.h>
 #include <datadriven/Signature.h>
 
-#include <qcc/Debug.h>
-#define QCC_MODULE "DD_COMMON"
-
 namespace datadriven {
+/**
+ * Dereferences the provided MsgArg if it is a variant otherwise returns the
+ * argument.
+ */
+const ajn::MsgArg& MsgArgDereference(const ajn::MsgArg& msgarg);
+
 QStatus MarshalArray(ajn::MsgArg& msgarg,
                      ajn::MsgArg* elements,
                      size_t numElements);
@@ -77,6 +83,9 @@ QStatus Marshal(ajn::MsgArg& msgarg,
 
 QStatus Marshal(ajn::MsgArg& msgarg,
                 const ObjectPath& data);
+
+QStatus Marshal(ajn::MsgArg& msgarg,
+                const ajn::MsgArg& data);
 
 template <typename K, typename V> QStatus Marshal(ajn::MsgArg& msgarg,
                                                   const std::map<const K, V>& data);
@@ -192,18 +201,23 @@ QStatus Unmarshal(Signature& data,
 QStatus Unmarshal(ObjectPath& data,
                   const ajn::MsgArg& msgarg);
 
+QStatus Unmarshal(ajn::MsgArg& data,
+                  const ajn::MsgArg& msgarg);
+
 template <typename K, typename V> QStatus Unmarshal(std::map<const K, V>& data,
                                                     const ajn::MsgArg& msgarg);
 
 template <typename T> QStatus Unmarshal(std::vector<T>& data, const ajn::MsgArg& msgarg)
 {
     QStatus status = ER_FAIL;
+    const ajn::MsgArg& m = MsgArgDereference(msgarg);
 
-    if ((ajn::ALLJOYN_ARRAY == msgarg.typeId) && (0 == data.size())) {
-        size_t numElements = msgarg.v_array.GetNumElements();
+    if (ajn::ALLJOYN_ARRAY == m.typeId) {
+        size_t numElements = m.v_array.GetNumElements();
+        data.clear();
 
         if (numElements > 0) {
-            const ajn::MsgArg* elements = msgarg.v_array.GetElements();
+            const ajn::MsgArg* elements = m.v_array.GetElements();
             std::vector<T> tmp;
 
             tmp.reserve(numElements);
@@ -227,12 +241,14 @@ template <typename T> QStatus Unmarshal(std::vector<T>& data, const ajn::MsgArg&
 template <typename K, typename V> QStatus Unmarshal(std::map<const K, V>& data, const ajn::MsgArg& msgarg)
 {
     QStatus status = ER_FAIL;
+    const ajn::MsgArg& m = MsgArgDereference(msgarg);
 
-    if ((ajn::ALLJOYN_ARRAY == msgarg.typeId) && (0 == data.size())) {
-        size_t numElements = msgarg.v_array.GetNumElements();
+    if (ajn::ALLJOYN_ARRAY == m.typeId) {
+        size_t numElements = m.v_array.GetNumElements();
+        data.clear();
 
         if (numElements > 0) {
-            const ajn::MsgArg* elements = msgarg.v_array.GetElements();
+            const ajn::MsgArg* elements = m.v_array.GetElements();
             std::map<const K, V> tmp;
 
             for (size_t i = 0; i < numElements; ++i) {
@@ -284,5 +300,4 @@ template <> QStatus Unmarshal<double>(std::vector<double>& data,
                                       const ajn::MsgArg& msgarg);
 }
 
-#undef QCC_MODULE
 #endif /* DATADRIVEN_MARSHAL_H_ */

@@ -29,6 +29,26 @@ void ConsumerMethodReply::SetStatus(const QStatus status)
     this->status = status;
 }
 
+const qcc::String ConsumerMethodReply::GetErrorName()
+{
+    return errorName;
+}
+
+void ConsumerMethodReply::SetErrorName(qcc::String errorName)
+{
+    this->errorName = errorName;
+}
+
+const qcc::String ConsumerMethodReply::GetErrorDescription()
+{
+    return errorDescription;
+}
+
+void ConsumerMethodReply::SetErrorDescription(qcc::String errorDescription)
+{
+    this->errorDescription = errorDescription;
+}
+
 ConsumerMethodReply::~ConsumerMethodReply()
 {
 }

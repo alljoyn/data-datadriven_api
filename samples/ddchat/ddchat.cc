@@ -31,9 +31,9 @@ using namespace gen::org_allseenalliance_sample;
 class Participant :
     public ProvidedObject, public ChatParticipantInterface {
   public:
-    Participant(BusConnection& conn,
+    Participant(shared_ptr<ObjectAdvertiser> advertiser,
                 const qcc::String& name) :
-        ProvidedObject(conn),
+        ProvidedObject(advertiser),
         ChatParticipantInterface(this)
     {
         this->name = name;
@@ -74,11 +74,21 @@ class MessageListener :
 
 int main(int argc, char** argv)
 {
-    BusConnection busConnection;
+    shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    if (nullptr == advertiser) {
+        cerr << "Bus Connection is not correctly initialized !!!" << endl;
+        return EXIT_FAILURE;
+    }
+
     ChatListener chatListener;
-    Observer<ChatParticipantProxy> observer(busConnection, &chatListener);
+    shared_ptr<Observer<ChatParticipantProxy> > observer = Observer<ChatParticipantProxy>::Create(&chatListener);
+    if (nullptr == observer) {
+        cerr << "Observer is not correctly initialized !!!" << endl;
+        return EXIT_FAILURE;
+    }
+
     MessageListener msgListener;
-    observer.AddSignalListener(msgListener);
+    observer->AddSignalListener(msgListener);
 
     /* create one or more participants */
     qcc::String name;
@@ -87,7 +97,7 @@ int main(int argc, char** argv)
     } else {
         name  = ("Participant" + to_string((long long)getpid())).c_str();
     }
-    Participant participant(busConnection, name);
+    Participant participant(advertiser, name);
     if (ER_OK != participant.PutOnBus()) { //This effectively publishes the object
         cerr << "Failed to announce participant !" << endl;
     }

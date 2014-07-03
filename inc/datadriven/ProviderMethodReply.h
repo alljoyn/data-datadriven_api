@@ -17,13 +17,11 @@
 #ifndef PROVIDERMETHODREPLY_H_
 #define PROVIDERMETHODREPLY_H_
 
+#include <memory>
 #include <alljoyn/Message.h>
 
-#include <qcc/Debug.h>
-#define QCC_MODULE "DD_PROVIDER"
-
 namespace datadriven {
-class ProvidedObject;
+class ProvidedObjectImpl; // forward
 
 /**
  * \class ProviderMethodReply
@@ -39,13 +37,34 @@ class ProviderMethodReply {
     /** Internal cleanup */
     virtual ~ProviderMethodReply();
 
+    /**
+     * \brief  Used to send back an error message on an invoked method call
+     *
+     * \param[in] error The name of the error
+     * \param[in] errorMessage A description of the error
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus SendError(const qcc::String& error,
+                      const qcc::String& errorMessage);
+
+    /** \brief  Used to send back an error status code on an invoked method call
+     *
+     * \param[in] status The status code for the error
+     *
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus SendErrorCode(QStatus status);
+
   protected:
     /**
      * Initializes the object
      * \param providedObject ProvidedObject on which the response is send back
      * \param message Marshaled <em>response content</em> to be send back
      */
-    ProviderMethodReply(ProvidedObject& providedObject,
+    ProviderMethodReply(std::shared_ptr<ProvidedObjectImpl> providedObject,
                         ajn::Message& message);
 
     /**
@@ -57,7 +76,7 @@ class ProviderMethodReply {
                         size_t numArgs = 0);
 
   private:
-    ProvidedObject& providedObject;
+    std::shared_ptr<ProvidedObjectImpl> providedObject;
     ajn::Message& message;
 };
 }

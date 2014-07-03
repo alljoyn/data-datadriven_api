@@ -20,6 +20,7 @@
 #include <ostream>
 
 #include <qcc/String.h>
+
 #include <alljoyn/Session.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/ProxyBusObject.h>
@@ -91,7 +92,7 @@ class ObjectId {
     qcc::String busObjectPath;
     ajn::SessionId sessionId;
 
-    friend class ObserverImpl;
+    friend class ObserverBase;
 };
 
 /** Creates a printable stream of the ObjectId contents */

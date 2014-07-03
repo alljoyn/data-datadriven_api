@@ -17,12 +17,12 @@
 #ifndef TYPEDESCRIPTION_H_
 #define TYPEDESCRIPTION_H_
 
+#include <vector>
+
 #include <qcc/String.h>
+
 #include <alljoyn/Status.h>
 #include <alljoyn/InterfaceDescription.h>
-
-#include <qcc/Debug.h>
-#define QCC_MODULE "DD_COMMON"
 
 namespace datadriven {
 /**
@@ -30,17 +30,81 @@ namespace datadriven {
  */
 class TypeDescription {
   public:
-    /** returns the name of the type */
-    virtual const qcc::String GetName() const = 0;
-
-    /** builds ajn interface description */
-    virtual QStatus BuildInterface(ajn::InterfaceDescription& iface) const = 0;
-
-    /** resolves ajn interface to array of member pointers (allocates memory !) */
-    virtual QStatus ResolveMembers(const ajn::InterfaceDescription& iface,
-                                   const ajn::InterfaceDescription::Member*** member) const = 0;
+    TypeDescription(const char* name);
 
     virtual ~TypeDescription();
+
+    /** returns the name of the type */
+    const qcc::String& GetName() const;
+
+    /** returns the index of a property */
+    int GetPropertyIdx(const char* name) const;
+
+    /** builds ajn interface description */
+    QStatus BuildInterface(ajn::InterfaceDescription& iface) const;
+
+    /** resolves ajn interface to array of member pointers (allocates memory !) */
+    QStatus ResolveMembers(const ajn::InterfaceDescription& iface,
+                           const ajn::InterfaceDescription::Member*** member) const;
+
+    /** returns a vector of all emitted (a.k.a. cached) properties */
+    std::vector<const char*> GetEmittablePropertyNames() const;
+
+    /** return true if there are any properties */
+    bool HasProperties() const;
+
+  protected:
+    const qcc::String name;
+
+    enum class EmitChangesSignal :
+        int8_t {
+        NEVER,
+        ALWAYS,
+        INVALIDATES
+    };
+    struct Property {
+        const char* name;
+        const char* sig;
+        uint8_t access;
+        EmitChangesSignal emits;
+    };
+    struct Method {
+        const char* name;
+        const char* inSig;
+        const char* outSig;
+        const char* argNames;
+        uint8_t annotation;
+        const char* accessPerms;
+    };
+    struct Signal {
+        const char* name;
+        const char* sig;
+        const char* argNames;
+        uint8_t annotation;
+        const char* accessPerms;
+    };
+    void AddProperty(const char* name,
+                     const char* signature,
+                     uint8_t access,
+                     EmitChangesSignal emits);
+
+    void AddMethod(const char* name,
+                   const char* inSig,
+                   const char* outSig,
+                   const char* argNames,
+                   uint8_t annotation = 0,
+                   const char* accessPerms = 0);
+
+    void AddSignal(const char* name,
+                   const char* sig,
+                   const char* argNames,
+                   uint8_t annotation = 0,
+                   const char* accessPerms = 0);
+
+  private:
+    std::vector<Property> properties;
+    std::vector<Method> methods;
+    std::vector<Signal> signals;
 };
 }
 

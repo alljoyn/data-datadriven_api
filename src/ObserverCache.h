@@ -19,35 +19,94 @@
 
 #include <map>
 #include <memory>
-#include <vector>
+#include <set>
 
 #include <datadriven/ObjectId.h>
 #include <datadriven/ProxyInterface.h>
 
 namespace datadriven {
+class ObserverBase;
+class ObjectAllocator;
+
 class ObserverCache {
   public:
-    class ObjectAllocator {
-      public:
-        virtual ~ObjectAllocator() { }
+    ObserverCache(const qcc::String ifName);
 
-        virtual ProxyInterface* Alloc(const ObjectId& objId) = 0;
-    };
+    ~ObserverCache();
 
-    ObserverCache();
+    /**
+     * Add a new \a observer to the cache
+     *
+     * \param observer the new observer
+     */
+    void AddObserver(std::weak_ptr<ObserverBase> observer);
 
-    std::shared_ptr<ProxyInterface> SetObject(const ObjectId& objId,
-                                              ObjectAllocator& allocator);
+    /**
+     * Remove \a observer from the cache and return the new vector size
+     *
+     * \param observer the observer to be removed
+     * \return the size of the vector after removing the observer
+     */
+    size_t RemoveObserver(std::weak_ptr<ObserverBase> observer);
 
+    /**
+     * Notify the \a observer with the current status of all proxy interface objects in the cache
+     *
+     * \param observer the observer to be notified
+     */
+    void NotifyObserver(std::weak_ptr<ObserverBase> observer);
+
+    /**
+     * Install the allocator for objects of this cache
+     *
+     * \param allocator the allocator to be installed
+     */
+    void SetAllocator(std::weak_ptr<ObjectAllocator> allocator);
+
+    /**
+     * Add a new object identified by \a objId to the cache using \a allocator
+     *
+     * \param objId the object identifier
+     * \return the new proxy interface object
+     */
+    std::shared_ptr<ProxyInterface> AddObject(const ObjectId& objId);
+
+    /**
+     * Remove an object identified by \a objId
+     *
+     * \param objId the object identifier
+     * \return the removed proxy interface object
+     */
     std::shared_ptr<ProxyInterface> RemoveObject(const ObjectId& objId);
 
-    /* This will return, by definition, a living object */
-    std::shared_ptr<ProxyInterface> Get(const ObjectId& objId);
+    /**
+     * Update an object identified by \a objId to the cache using \a dict
+     *
+     * \param objId the object identifier
+     * \param dict the updated properties
+     * \return the updated proxy interface object
+     */
+    std::shared_ptr<ProxyInterface> UpdateObject(const ObjectId& objId,
+                                                 const ajn::MsgArg* dict);
+
+    /**
+     * This will return, by definition, a living object
+     *
+     * \param objId the object identifier
+     * \return the proxy interface object
+     * */
+    std::shared_ptr<ProxyInterface> GetObject(const ObjectId& objId);
 
     /* TODO: REPLACE THIS NAIVE APPROACH (by reusing the iterator on livingobjects*/
     std::vector<std::shared_ptr<ProxyInterface> > LivingObjects() const;
 
   private:
+    /**
+     * Set of observers for a specific proxy interface.
+     */
+    typedef std::set<std::weak_ptr<ObserverBase>, std::owner_less <std::weak_ptr<ObserverBase> > > ObserverSet;
+    ObserverSet observers;
+
     /* ignore busAttachment here (not relevant and probably will go out anyway) */
     struct ObjectIdComp {
         bool operator()(const ObjectId& o1,
@@ -59,6 +118,17 @@ class ObserverCache {
     ObjectIdToSharedPtrMap livingObjects;
     ObjectIdToWeakPtrMap deadObjects;         /* aka the graveyard */
     mutable qcc::Mutex mutex;         /* is recursive */
+
+    /**
+     * The name of the interface for which this cache is created
+     */
+    qcc::String ifName;
+
+    /**
+     * The allocator to allocate objects of the type T held in this cache
+     * This is implicitly derived from the Observer<T>
+     */
+    std::weak_ptr<ObjectAllocator> allocator;
 
     void GarbageCollect();
 };

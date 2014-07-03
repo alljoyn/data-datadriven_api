@@ -17,94 +17,55 @@
 #ifndef BUSCONNECTIONIMPL_H_
 #define BUSCONNECTIONIMPL_H_
 
-#include "ConsumerSessionManager.h"
-#include "ProviderSessionManager.h"
 #include <map>
+#include <set>
+
 #include <qcc/String.h>
-#include <qcc/Debug.h>
 #include <qcc/Mutex.h>
-#include <alljoyn/services_common/AsyncTaskQueue.h>
+
+#include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <alljoyn/Status.h>
+
+#include <datadriven/ObserverBase.h>
+
+#include <qcc/Debug.h>
 #define QCC_MODULE "DD_COMMON"
 
 namespace datadriven {
-class ProviderCache;
 class RegisteredTypeDescription;
-class ProvidedObject;
+class ProvidedObjectImpl;
+class SignalListenerBase;
 
-class BusConnectionImpl :
-    private ajn::services::AsyncTask {
+class BusConnectionImpl {
   public:
-    BusConnectionImpl();
+    /**
+     * Checks if the singleton BusConnectionImpl is already created. If not, it will be created.
+     * \return the BusConnectionImpl object or nullptr in case of an error
+     */
+    static std::shared_ptr<BusConnectionImpl> GetInstance(ajn::BusAttachment* ba = NULL);
+
     virtual ~BusConnectionImpl();
+
+    /**
+     * Returns the status of the BusConnectionImpl object
+     */
     QStatus GetStatus() const;
 
-    ConsumerSessionManager& GetConsumerSessionManager();
-
-    ProviderSessionManager& GetProviderSessionManager();
-
-    // TODO This is provider specific
-    ProviderCache* GetProviderCache(const qcc::String& intfname);
-
-    void RegisterTypeDescription(const RegisteredTypeDescription* typedesc);
-
-    class BusConnTaskData :
-        public ajn::services::TaskData {
-      public:
-        virtual void Execute(const BusConnTaskData* td) const = 0;
-    };
-
-    void ProviderAsyncEnqueue(const BusConnTaskData* bctd);
-
-    void ConsumerAsyncEnqueue(const BusConnTaskData* bctd);
-
-    void AddObserver(const ObserverImpl* observer);
-
-    void RemoveObserver(const ObserverImpl* observer);
-
-    QStatus AddSignalListener(SignalListenerImpl* signalListener);
-
-    QStatus RemoveSignalListener(SignalListenerImpl* signalListener);
-
-    QStatus AddProvidedObject(ProvidedObject* object);
-
-    void RemoveProvidedObject(ProvidedObject* object);
+    /**
+     * Returns the BusAttachment object of this BusConnectionImpl object
+     */
+    ajn::BusAttachment& GetBusAttachment() const;
 
   private:
-    friend class SignalListenerImpl;
-    friend class ObserverImpl;
-    friend class ProvidedObject;
-    QStatus LockForSignalListener(SignalListenerImpl* signalListener);
-
-    QStatus LockForObserver(ObserverImpl* observer);
-
-    void UnlockObserver();
-
-    QStatus LockForProvidedObject(ProvidedObject* object);
-
-    void UnlockProvidedObject();
-
+    BusConnectionImpl(ajn::BusAttachment* ba = NULL);
     BusConnectionImpl(const BusConnectionImpl&);
+
+    /** The status of the object */
     QStatus status;
-    ConsumerSessionManager consumerSessionManager;
-    ProviderSessionManager providerSessionManager;
-    std::map<qcc::String, std::unique_ptr<ProviderCache> > caches;
-    std::map<qcc::String, const RegisteredTypeDescription*> typedescs;
-
-    mutable qcc::Mutex observersMutex;
-    typedef std::map<ajn::InterfaceDescription::Member*, SignalListenerImpl*> SignalListenerPerMemberMap;
-    std::map<const ObserverImpl*, SignalListenerPerMemberMap> observers;
-
-    mutable qcc::Mutex providersMutex;
-    std::vector<const ProvidedObject*> providers;
-
-    /* ajn::services::AsyncTask */
-    virtual void OnEmptyQueue();
-
-    virtual void OnTask(ajn::services::TaskData const* taskdata);
-
-    mutable ajn::services::AsyncTaskQueue providerAsync;
-    mutable ajn::services::AsyncTaskQueue consumerAsync;
+    /** Pointer to the BusAttachment object */
+    ajn::BusAttachment* ba;
+    /** Indicates that the BusAttachment was created by this object (true) or not (false) */
+    bool ownBa;
 };
 }
 

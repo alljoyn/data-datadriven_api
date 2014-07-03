@@ -24,7 +24,7 @@
 #include "DoorInterface.h"
 
 using namespace std;
-using namespace::gen::org_allseenalliance_sample;
+using namespace gen::org_allseenalliance_sample;
 
 class Door;
 vector<std::unique_ptr<Door> > g_doors;
@@ -34,17 +34,19 @@ class Door :
     public datadriven::ProvidedObject, public DoorInterface {
   private:
     pthread_mutex_t mutex;
+    uint32_t code;
 
   public:
-    Door(datadriven::BusConnection& busConnection,
+    Door(shared_ptr<datadriven::ObjectAdvertiser> advertiser,
          qcc::String location,
          bool open = false,
          qcc::String path = "") :
-        datadriven::ProvidedObject(busConnection, path),   /* If you don't pass a path, it will be constructed for you */
+        datadriven::ProvidedObject(advertiser, path),   /* If you don't pass a path, it will be constructed for you */
         DoorInterface(this), mutex(PTHREAD_MUTEX_INITIALIZER)
     {
         this->open = open;
         this->location = location;
+        code = 1234;
     }
 
     ~Door()
@@ -56,6 +58,12 @@ class Door :
         return location;
     }
 
+    QStatus Getcode(uint32_t& _code) const
+    {
+        _code = code;
+        return ER_OK;
+    }
+
     /* Implement pure virtual function */
     void Open(OpenReply& reply)
     {
@@ -63,12 +71,13 @@ class Door :
         cout << "Door @ " << location.c_str() << " was requested to open." << endl;
         if (this->open) {
             cout << "\t... but it was already open." << endl;
-            reply.Send(false);
+            /* Send an errorCode */
+            reply.SendErrorCode(ER_FAIL);
         } else {
             cout << "\t... and it was closed, so we can comply." << endl;
             this->open = true;
             this->DoorInterface::Update();
-            reply.Send(true);
+            reply.Send();
         }
         cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
@@ -84,14 +93,36 @@ class Door :
             cout << "\t... and it was open, so we can comply." << endl;
             this->open = false;
             this->DoorInterface::Update();
-            reply.Send(true);
+            reply.Send();
         } else {
             cout << "\t... but it was already closed." << endl;
-            reply.Send(false);
+            /* Send an error with a description */
+            reply.SendError("org.allseenalliance.sample.Door.CloseError", "Could not close the door, already closed");
         }
         cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
         cout.flush();
+    }
+
+    /* Implement pure virtual function */
+    void KnockAndRun()
+    {
+        pthread_mutex_lock(&mutex);
+        if (!this->open) {
+            // see who's there
+            cout << "Someone knocked on door @ " << location.c_str() << endl;
+            cout << "\t... opening door" << endl;
+            this->open = true;
+            this->DoorInterface::Update();
+            cout << "\t... GRRRR damn children!!!" << endl;
+            cout << "\t... slamming door shut" << endl;
+            this->open = false;
+            this->DoorInterface::Update();
+        } else {
+            // door was open while knocking
+            cout << "GOTCHA!!! @ " << location.c_str() << " door" << endl;
+        }
+        pthread_mutex_unlock(&mutex);
     }
 
     void FlipOpen()
@@ -101,6 +132,16 @@ class Door :
         cout << action << " door @ " << location.c_str() << "." << endl;
         open = !open;
         this->DoorInterface::Update();
+        pthread_mutex_unlock(&mutex);
+    }
+
+    void ChangeCode()
+    {
+        pthread_mutex_lock(&mutex);
+        cout << "door @ " << location.c_str() << ": change code" << endl;
+        code = rand() % 10000; //code of max 4 digits
+        Invalidatecode();
+        UpdateAll();
         pthread_mutex_unlock(&mutex);
     }
 
@@ -121,14 +162,15 @@ static void help()
     cout << "p <who>   signal that <who> passed through the door" << endl;
     cout << "r         remove or reattach the door to the bus" << endl;
     cout << "n         move to the next door in the list" << endl;
+    cout << "c         change the code of the door" << endl;
     cout << "h         show this help message" << endl;
 }
 
 int main(int argc, char** argv)
 {
-    datadriven::BusConnection busConnection;
-    if (ER_OK != busConnection.GetStatus()) {
-        cerr << "Bus Connection not correctly initialized !!!" << endl;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create();
+    if (nullptr == advertiser) {
+        cerr << "Object advertiser not correctly initialized !!!" << endl;
         return EXIT_FAILURE;
     }
 
@@ -141,7 +183,7 @@ int main(int argc, char** argv)
     string path_root = "/Door/";
     for (int i = 1; i < argc; ++i) {
         string path = path_root + std::to_string(i);
-        std::unique_ptr<Door> door = std::unique_ptr<Door>(new Door(busConnection, argv[i], false, path.c_str()));
+        std::unique_ptr<Door> door = std::unique_ptr<Door>(new Door(advertiser, argv[i], false, path.c_str()));
 
         if (ER_OK == door->GetStatus()) {
             if (ER_OK != door->PutOnBus()) {
@@ -176,6 +218,11 @@ int main(int argc, char** argv)
 
         case 'f': {
                 g_doors[g_turn]->FlipOpen();
+                break;
+            }
+
+        case 'c': {
+                g_doors[g_turn]->ChangeCode();
                 break;
             }
 

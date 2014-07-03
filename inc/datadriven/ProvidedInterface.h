@@ -17,18 +17,18 @@
 #ifndef PROVIDEDINTERFACE_H_
 #define PROVIDEDINTERFACE_H_
 
-#include <vector>
 #include <memory>
+#include <map>
+#include <set>
+
+#include <qcc/Mutex.h>
 
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
 
-#include <qcc/Debug.h>
-#define QCC_MODULE "DD_PROVIDER"
-
 namespace datadriven {
 class TypeDescription;
-class ProvidedObject;
+class ProvidedObjectImpl;
 class RegisteredTypeDescription;
 
 /**
@@ -49,24 +49,18 @@ class ProvidedInterface :
     public ajn::MessageReceiver {
   public:
     /** \private
-     * Describes/defines the type of the provided interface
-     * \return Type description
-     */
-    const TypeDescription* GetTypeDescription() const;
-
-    /** \private
      * Retrieves the registered format of the type description
      * \return Registered type description
      */
     const RegisteredTypeDescription* GetRegisteredTypeDescription() const;
 
     /** \private
-     * Registers the Type description in the underlying communication layer
+     * Registers this interface in the underlying communication layer
      * \param busAttachment Alljoyn bus connection
      * \retval ER_OK on success
      * \retval others on failure
      */
-    QStatus RegisterInterface(ajn::BusAttachment& busAttachment);
+    QStatus Register(ajn::BusAttachment& busAttachment);
 
     /**
      * \brief Alert all consumers that the observable properties of this object
@@ -105,14 +99,64 @@ class ProvidedInterface :
      */
     QStatus GetStatus() const;
 
+    /** \private
+     * Code generator will implement this virtual function to marshal the properties
+     */
+    virtual QStatus MarshalProperties() = 0;
+
+    /** \private
+     * Get the value of a property with name \a name
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus GetProperty(const char* name,
+                        ajn::MsgArg& value);
+
+    /** \private
+     * Set the value of a property with name \a name
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus SetProperty(const char* name,
+                        ajn::MsgArg& value);
+
   protected:
+    /**
+     * \class PropertyValue
+     * \brief Class holds the property value. Both the index in the message arguments array
+     *        as the MsgArg itself are stored in this class
+     */
+    class PropertyValue {
+      public:
+        /**
+         * The marshaled value of the property
+         */
+        ajn::MsgArg msgArg;
+        /**
+         * The index of this property in the message arguments array
+         */
+        unsigned int idx;
+
+        /**
+         * Constucts a PropertyValue object with a given index
+         *
+         * \param[in] idx index of the property
+         */
+        PropertyValue(unsigned int idx) :
+            idx(idx) { };
+    };
+    /** \private
+     * A map of the marshaled properties (name-value pairs)
+     */
+    std::map<qcc::String, PropertyValue*> marshaledProperties;
+
     /** \private
      * Initialization of the object
      * \param desc type description
      * \param obj Reference to the Provided Object to which it belongs
      */
     ProvidedInterface(const TypeDescription& desc,
-                      ProvidedObject& providedObject);
+                      std::shared_ptr<ProvidedObjectImpl> providedObject);
 
     /**
      * Object cleanup
@@ -120,19 +164,49 @@ class ProvidedInterface :
     virtual ~ProvidedInterface();
 
     /** \private
-     * Code generator will implement this virtual function to marshal the properties
+     * Get the implementation of the provided object. This is used by the
+     * generated code.
+     *
+     * \return the ProvidedObjectImpl shared pointer
      */
-    virtual std::vector<ajn::MsgArg> MarshalProperties() = 0;
-
-    /** \private
-     * Get the object providing this interface.
-     */
-    ProvidedObject& GetProvidedObject();
+    std::shared_ptr<ProvidedObjectImpl> GetObjectImpl();
 
     /** \private
      * The current status of this interface.
      * */
-    QStatus status;
+    QStatus _status;
+
+    /** \private
+     * Code generator will implement this virtual function to set one of the properties
+     */
+    virtual QStatus DispatchSetProperty(const char* propName,
+                                        ajn::MsgArg& propValue) = 0;
+
+    /** \private
+     * Code generator will implement this virtual function to get one of the properties
+     */
+    virtual QStatus DispatchGetProperty(const char* propName,
+                                        ajn::MsgArg& propValue) const = 0;
+
+    /** \private
+     * Invalidate a property so it will be sent out in the PropertiesChanged signal.
+     *
+     * \retval ER_OK on success
+     * \retval ER_BUS_NO_SUCH_PROPERTY if the property name is invalid
+     */
+    QStatus InvalidateProperty(const char* name);
+
+    /** \private
+     * Emits a signal (broadcast) across the communication layer
+     * \param[in] signalNumber The number of the signal to be emitted.
+     * \param[in] args List of input arguments to be taken by the Signal invocation.
+     * \param[in] numArgs Number of input arguments.
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus EmitSignal(int signalNumber,
+                       const ajn::MsgArg* args = NULL,
+                       size_t numArgs = 0);
 
   private:
     /** Reference to TypeDescription */
@@ -141,8 +215,22 @@ class ProvidedInterface :
     /** RegisteredTypeDescription */
     std::unique_ptr<RegisteredTypeDescription> iface;
 
-    /** RegisteredTypeDescription */
-    ProvidedObject& providedObject;
+    /** ProvidedObject */
+    std::shared_ptr<ProvidedObjectImpl> object;
+
+    /** Set of properties that are invalidated and will be sent out in a PropertiesChanged signal.*/
+    std::set<const char*> invalidatedProperties;
+
+    /** Protects the invalidatedProperties set. */
+    mutable qcc::Mutex invalidatedPropertiesMutex;
+
+    /**
+     * \private
+     * Send the update signal
+     * \retval ER_OK on success
+     * \retval others on failure
+     */
+    QStatus SignalUpdate();
 };
 }
 
