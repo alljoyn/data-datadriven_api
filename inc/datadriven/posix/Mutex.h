@@ -106,7 +106,7 @@ class Mutex {
 
     /**
      * Give the condition variable class access to the underlying mutex so it
-     * can get the private pthread_mutex_t of a qcc::Mutex and use the pthreads
+     * can get the private pthread_mutex_t of a datadriven::Mutex and use the pthreads
      * condition variable functions directly.
      */
     friend class Condition;

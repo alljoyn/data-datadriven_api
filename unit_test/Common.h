@@ -193,7 +193,7 @@ class TestObjectListener :
 
   private:
     Semaphore semaphore;
-    qcc::Mutex mutex;
+    datadriven::Mutex mutex;
     unsigned int numberOfObservers;
 };
 

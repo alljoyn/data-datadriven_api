@@ -21,7 +21,6 @@
 #include <set>
 
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
 
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <alljoyn/Status.h>

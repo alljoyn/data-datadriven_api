@@ -22,7 +22,7 @@
 
 #include <alljoyn/BusObject.h>
 
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 
@@ -224,7 +224,7 @@ class ProvidedObjectImpl :
     std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl;
     ProvidedObjectImpl::State state;
     std::weak_ptr<ProvidedObjectImpl> self; // Weak pointer that can be passed to other objects
-    qcc::Mutex mutex;
+    datadriven::Mutex mutex;
     std::vector<qcc::String> interfaceNames;
     ProvidedObject& providedObject;
 

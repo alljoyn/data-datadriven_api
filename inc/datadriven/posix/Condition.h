@@ -54,11 +54,11 @@ namespace datadriven {
  * std::deque<int32_t> prot;
  * const uint32_t B_MAX = 2;
  *
- * qcc:: Condition emtpy;
- * qcc:: Condition full;
+ * datadriven:: Condition emtpy;
+ * datadriven:: Condition full;
  * datadriven::Mutex m;
  *
- * void Produce(qcc::Condition& empty, qcc::Condition& full, datadriven::Mutex& m, uint32_t thing)
+ * void Produce(datadriven::Condition& empty, datadriven::Condition& full, datadriven::Mutex& m, uint32_t thing)
  * {
  *     m.Lock();
  *     while (prot.size() == B_MAX) {
@@ -69,7 +69,7 @@ namespace datadriven {
  *     m.Unlock();
  * }
  *
- * uint32_t Consume(qcc::Condition& empty, qcc::Condition& full, datadriven::Mutex& m)
+ * uint32_t Consume(datadriven::Condition& empty, datadriven::Condition& full, datadriven::Mutex& m)
  * {
  *     m.Lock();
  *     while (prot.size() == 0) {

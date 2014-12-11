@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 #include <ostream>
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include "consumer.h"
 
@@ -76,7 +76,7 @@ class Consumer::EmitNumListener :
     }
 
   private:
-    mutable qcc::Mutex mutex;
+    mutable datadriven::Mutex mutex;
     int consId;
     datadriven::Semaphore* sema;
     map<int, int> idNumMap;
