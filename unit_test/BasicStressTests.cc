@@ -152,7 +152,9 @@ TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
     ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
 
     for (int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObject" + to_string(i)).c_str();
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObject%d", i);
+        testObjName = qcc::String(buffer);
         tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
 
         cout << testObjName.c_str() << " Initial State is : " << tos.back()->GetState() << endl;
@@ -233,6 +235,10 @@ TEST(BasicStressTests, MethodCallInvalidArgument) {
 /**
  * \test This tests aims to verify sending out a signal will return an error
  *       if marshalling an argument fails.
+ *
+ *       Remark: With ajn::SESSION_ID_ALL_HOSTED we have to make sure
+ *       we create an observer otherwise there will be no session to send the signal on
+ *       and no marshaling of the data will be done, causing the test to fail.
  */
 TEST(BasicStressTests, SignalInvalidArgument) {
     shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
@@ -240,10 +246,21 @@ TEST(BasicStressTests, SignalInvalidArgument) {
 
     ASSERT_TRUE(advertiser != nullptr);
 
+    TestObjectListener testObjectListener;
+    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
+        &testObjectListener);
+
+    ASSERT_TRUE(obs->GetStatus() == ER_OK);
+
+    TestObjectSignalListener tosl;
+    ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+
     vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
 
     ASSERT_NE(vto->ERROR, vto->GetState());
     ASSERT_EQ(ER_OK, vto->UpdateAll());
+
+    testObjectListener.Wait();
 
     /* Make a very long string */
     qcc::String tmp(BIG_TEXT);

@@ -18,7 +18,11 @@ env = SConscript('../../core/alljoyn/build_core/SConscript')
 
 vars = Variables()
 vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp', 'cpp')
-vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES',
+vars.Add(EnumVariable('BUILD_SAMPLES',
+                      'Build the services samples.',
+                      'on',
+                      allowed_values = ['on', 'off']))
+vars.Add(EnumVariable('BUILD_TESTS',
                       'Build the services samples.',
                       'on',
                       allowed_values = ['on', 'off']))

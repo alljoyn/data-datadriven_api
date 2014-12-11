@@ -21,7 +21,7 @@
 #include <map>
 #include <memory>
 
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <datadriven/ObjectAllocator.h>
 #include <datadriven/ProxyInterface.h>
@@ -99,6 +99,12 @@ class ObserverBase :
      */
     void HandleSignal(SignalListenerBase* listener,
                       const ajn::Message& message);
+
+    /**
+     * Return the number of discovered objects.
+     * \return number of discovered objects
+     */
+    size_t Size();
 
   protected:
     /**
@@ -237,7 +243,7 @@ class ObserverBase :
     /**
      * Mutex protecting the signal listeners map.
      */
-    qcc::Mutex signalListenersMutex;
+    datadriven::Mutex signalListenersMutex;
 
     /**
      * Called when the object identified by \a objId needs to be updated. This actually

@@ -22,6 +22,7 @@
 
 #include <alljoyn/BusObject.h>
 
+#include <qcc/Mutex.h>
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 
@@ -123,7 +124,17 @@ class ProvidedObjectImpl :
      */
     const std::vector<qcc::String>& GetInterfaceNames() const;
 
+    /**
+     * Adds the interface name to the list of interfaces provided by this object.
+     * \param name the interface name
+     */
     void AddInterfaceName(const qcc::String& name);
+
+    /**
+     * Removes the interface name from the list of interfaces provided by this object.
+     * \param name the interface name
+     */
+    void RemoveInterfaceName(const qcc::String& name);
 
     /**
      * \brief Get the object's <em>object path</em>.
@@ -213,6 +224,7 @@ class ProvidedObjectImpl :
     std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl;
     ProvidedObjectImpl::State state;
     std::weak_ptr<ProvidedObjectImpl> self; // Weak pointer that can be passed to other objects
+    qcc::Mutex mutex;
     std::vector<qcc::String> interfaceNames;
     ProvidedObject& providedObject;
 

@@ -46,7 +46,7 @@ class AllTypes :
      * \test Let the provider know to continue with the test.
      */
     virtual void InvalidateAll(int64_t new_cnt,
-                               InvalidateAllReply& _reply);
+                               std::shared_ptr<InvalidateAllReply> _reply);
 
     /**
      * \test All types method call:
@@ -68,7 +68,7 @@ class AllTypes :
                                     datadriven::ObjectPath arg_in_objpath,
                                     ajn::MsgArg arg_in_variant,
                                     const AllTypesInterface::Type::StructWithAllTypes& arg_in_struct,
-                                    MethodWithAllTypesInAndOutReply& _reply);
+                                    std::shared_ptr<MethodWithAllTypesInAndOutReply> _reply);
 
     /**
      * \test Arrays of all types method call:
@@ -91,7 +91,7 @@ class AllTypes :
                                      const std::vector<AllArraysInterface::Type::StructNested>& arg_in_struct,
                                      const std::vector<std::vector<int32_t> >& arg_in_array,
                                      const std::vector<AllArraysInterface::Type::DictionaryOfInt32>& arg_in_dict,
-                                     MethodWithAllArraysInAndOutReply& reply);
+                                     std::shared_ptr<MethodWithAllArraysInAndOutReply> reply);
 
     /**
      * \test Dictionaries with all types of keys and values method call:
@@ -118,7 +118,7 @@ class AllTypes :
                                            const AllDictionariesInterface::Type::DictionaryOfStruct& arg_in_struct,
                                            const AllDictionariesInterface::Type::DictionaryOfArray& arg_in_array,
                                            const AllDictionariesInterface::Type::DictionaryOfDictionary& arg_in_dict,
-                                           MethodWithAllDictionariesInAndOutReply& reply);
+                                           std::shared_ptr<MethodWithAllDictionariesInAndOutReply> reply);
 
     /**
      * \test No output argument method call:
@@ -127,14 +127,14 @@ class AllTypes :
      *       -# fire signal without arguments
      */
     void MethodWithoutOut(bool arg_in_boolean,
-                          MethodWithoutOutReply& reply);
+                          std::shared_ptr<MethodWithoutOutReply> reply);
 
     /**
      * \test No input arguments method call:
      *       -# reception of a method call without input arguments
      *       -# respond with reply with output arguments
      */
-    void MethodWithoutIn(MethodWithoutInReply& reply);
+    void MethodWithoutIn(std::shared_ptr<MethodWithoutInReply> reply);
 
     // Inval properties getter functions
 

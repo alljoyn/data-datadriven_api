@@ -104,6 +104,12 @@ QStatus ObserverBase::SetRefCountedPtr(std::weak_ptr<ObserverBase> observer)
     return observerMgr->RegisterObserver(observerBase, ifName);
 }
 
+size_t ObserverBase::Size()
+{
+    std::shared_ptr<ObserverCache> cache = observerMgr->GetCache(registeredTypeDesc->GetDescription().GetName());
+    return cache->LivingObjects().size();
+}
+
 QStatus ObserverBase::AddSignalListener(SignalListenerBase* listener,
                                         int memberNumber)
 {

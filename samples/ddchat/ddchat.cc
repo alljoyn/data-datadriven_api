@@ -23,6 +23,7 @@
 
 #include <ChatParticipantInterface.h>
 #include <ChatParticipantProxy.h>
+#include <cstdio>
 
 using namespace std;
 using namespace datadriven;
@@ -95,7 +96,9 @@ int main(int argc, char** argv)
     if (argc > 1) {
         name = argv[1];
     } else {
-        name  = ("Participant" + to_string((long long)getpid())).c_str();
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "Participant%lld", (long long)getpid());
+        name = qcc::String(buffer);
     }
     Participant participant(advertiser, name);
     if (ER_OK != participant.PutOnBus()) { //This effectively publishes the object

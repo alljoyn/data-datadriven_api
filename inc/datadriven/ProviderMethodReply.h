@@ -77,7 +77,13 @@ class ProviderMethodReply {
 
   private:
     std::shared_ptr<ProvidedObjectImpl> providedObject;
-    ajn::Message& message;
+    /* TODO: We might be able to optimize this.
+     * This however is how they do it in alljoyn bbservice
+     * Tried it with refcounting the message, but for some reason
+     * sometimes this did not work.
+     * a copy is the only thing that seems to be working for now
+     */
+    ajn::Message message;
 };
 }
 

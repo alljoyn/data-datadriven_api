@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "validate.h"
+#include <cstdio>
 
 /* New value of cnt for the invalidated properties,
  * just to make sure they are correctly picked up on the other side
@@ -33,7 +34,9 @@ template <> void validate<qcc::String>(const qcc::String& s,
                                        size_t nelem,
                                        long long& cnt)
 {
-    assert(0 == s.compare(std::to_string(++cnt).c_str()));
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "%lld", ++cnt);
+    assert(0 == s.compare(qcc::String(buffer)));
 }
 
 template <> void validate<datadriven::Signature>(const datadriven::Signature& s,
@@ -47,7 +50,9 @@ template <> void validate<datadriven::ObjectPath>(const datadriven::ObjectPath& 
                                                   size_t nelem,
                                                   long long& cnt)
 {
-    assert(0 == o.compare(("/path/" + std::to_string(++cnt)).c_str()));
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "/path/%lld", ++cnt);
+    assert(0 == o.compare(qcc::String(buffer)));
 }
 
 template <> void validate<ajn::MsgArg>(const ajn::MsgArg& v,

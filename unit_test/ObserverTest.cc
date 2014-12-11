@@ -42,6 +42,7 @@ TEST(ObserverTests, NoListener)
 
     std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(nullptr);
     ASSERT_TRUE(obs != nullptr);
+    ASSERT_EQ(obs->Size(), 0u);
 
     /* 1) publish an object */
     ASSERT_EQ(ER_OK, obj.PutOnBus());
@@ -54,6 +55,7 @@ TEST(ObserverTests, NoListener)
     ASSERT_NE(TRIES, i);
     /* only one object should be present */
     ASSERT_TRUE(obs->end() == ++obs->begin());
+    ASSERT_EQ(obs->Size(), 1u);
     /* and it should contain valid data */
     ASSERT_TRUE(0 == obs->begin()->GetProperties().name.compare("xyz"));
 
@@ -69,6 +71,7 @@ TEST(ObserverTests, NoListener)
     ASSERT_NE(TRIES, i);
     /* still only one object should be present */
     ASSERT_TRUE(obs->end() == ++obs->begin());
+    ASSERT_EQ(obs->Size(), 1u);
 
     /* 3) remove object */
     obj.RemoveFromBus();
@@ -76,6 +79,7 @@ TEST(ObserverTests, NoListener)
     while (obs->begin() != obs->end()) {
         sleep(1);
     }
+    ASSERT_EQ(obs->Size(), 0u);
 }
 }
 //namespace

@@ -45,8 +45,9 @@ ProxyInterface::ProxyInterface(const RegisteredTypeDescription& desc,
 
 ProxyInterface::~ProxyInterface()
 {
-    if (ER_OK != proxyBusObject.UnregisterPropertiesChangedListener(ifaceName.c_str(), *propChangedListener)) {
-        QCC_LogError(status, ("Failed to unregister property changed handler"));
+    status = proxyBusObject.UnregisterPropertiesChangedListener(ifaceName.c_str(), *propChangedListener);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to unregister property changed handler: %s", ifaceName.c_str()));
     }
 }
 

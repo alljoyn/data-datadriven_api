@@ -20,6 +20,7 @@
 #include <memory>
 
 #include <datadriven/MethodInvocationBase.h>
+#include <datadriven/MethodReplyListener.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_CONSUMER"
@@ -48,9 +49,10 @@ template <typename T> class MethodInvocation :
     static std::shared_ptr<MethodInvocation<T> > Create()
     {
         MethodInvocation<T>* inv = new datadriven::MethodInvocation<T>();
-        std::shared_ptr<MethodInvocation<T> > sp = std::shared_ptr<MethodInvocation<T> >(inv);
+        std::shared_ptr<MethodInvocationBase> sp(inv);
         inv->SetRefCountedPtr(sp);
-        return sp;
+        inv->methodReplyListener = nullptr;
+        return std::static_pointer_cast<MethodInvocation<T> >(sp);
     }
 
     /** Cleanup of the Future object. */
@@ -73,13 +75,58 @@ template <typename T> class MethodInvocation :
         return reply;
     }
 
+    /**
+     * \brief Add a listener for the method reply
+     *
+     * This call will add a listener that will be called when the method call
+     * has received a reply. This method can only be called once.
+     * When the listener is set, it cannot be reset by another listener.
+     *
+     * The most common practice is to call this right after receiving
+     * the method invocation from the method call.
+     *
+     * \retval ER_OK When the listener is set correctly.
+     * \retval ER_FAIL When the listener is already set.
+     */
+    QStatus SetListener(MethodReplyListener<T>& listener)
+    {
+        QStatus status = ER_OK;
+        methodReplyListenerMutex.Lock();
+        if (methodReplyListener) {
+            status = ER_FAIL;
+        } else {
+            methodReplyListener = &listener;
+
+            /* If we notice that a reply is already processed,
+             * we can immediately schedule the listener */
+            if (READY == state) {
+                ScheduleMethodReplyListener();
+            }
+        }
+        methodReplyListenerMutex.Unlock();
+        return status;
+    }
+
+    /**
+     * \brief Tell the framework you do not care about the reply of this method call.
+     *
+     * This is only a local reinforcement, it explicitly tells the framework
+     * you are no longer interested in the reply of the method call.
+     */
+    void Cancel()
+    {
+        methodReplyListenerMutex.Lock();
+        UnsetRefCountedPtr();
+        methodReplyListenerMutex.Unlock();
+    }
+
     /** \private
      * Move constructor.
      * \param inv Original MethodInvocation object to be moved.
      */
     MethodInvocation(const MethodInvocation && inv) :
-        reply(std::move(inv.reply))
-    { }
+        reply(std::move(inv.reply)), methodReplyListener(inv.methodReplyListener)
+    { inv.methodReplyListener =  nullptr; }
 
   protected:
     /**
@@ -90,8 +137,24 @@ template <typename T> class MethodInvocation :
         return reply;
     }
 
+    /**
+     * \private
+     * Call the OnReplyMessage function on the MethodReplyListener
+     */
+    virtual void HandleReply()
+    {
+        methodReplyListenerMutex.Lock();
+        if (methodReplyListener) {
+            methodReplyListener->OnReply(reply);
+            UnsetRefCountedPtr();
+        }
+        methodReplyListenerMutex.Unlock();
+    }
+
   private:
     T reply;
+    MethodReplyListener<T>* methodReplyListener;
+    datadriven::Mutex methodReplyListenerMutex;
 
     /** Initializes the Future object. */
     MethodInvocation()

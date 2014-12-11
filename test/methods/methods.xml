@@ -20,6 +20,10 @@ Copyright (c) 2014, AllSeen Alliance. All rights reserved.
     <method name="Sleep">
       <arg name="numOfMSec" type="u" direction="in" />
     </method>
+    <method name="MethodWithCallback"></method>
+    <method name="ReplyAsync">
+      <arg name="numOfMSec" type="u" direction="in" />
+    </method>
     <method name="ReplyViaSignal">
       <arg name="i" type="i" direction="in" />
       <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>

@@ -20,6 +20,7 @@
 #include <memory>
 #include <stdlib.h>
 #include <pthread.h>
+#include <errno.h>
 #include <datadriven/datadriven.h>
 #include "DoorInterface.h"
 
@@ -65,19 +66,19 @@ class Door :
     }
 
     /* Implement pure virtual function */
-    void Open(OpenReply& reply)
+    void Open(std::shared_ptr<OpenReply> reply)
     {
         pthread_mutex_lock(&mutex);
         cout << "Door @ " << location.c_str() << " was requested to open." << endl;
         if (this->open) {
             cout << "\t... but it was already open." << endl;
             /* Send an errorCode */
-            reply.SendErrorCode(ER_FAIL);
+            reply->SendErrorCode(ER_FAIL);
         } else {
             cout << "\t... and it was closed, so we can comply." << endl;
             this->open = true;
             this->DoorInterface::Update();
-            reply.Send();
+            reply->Send();
         }
         cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
@@ -85,7 +86,7 @@ class Door :
     }
 
     /* Implement pure virtual function */
-    void Close(CloseReply& reply)
+    void Close(std::shared_ptr<CloseReply> reply)
     {
         pthread_mutex_lock(&mutex);
         cout << "Door @ " << location.c_str() << " was requested to close." << endl;
@@ -93,11 +94,11 @@ class Door :
             cout << "\t... and it was open, so we can comply." << endl;
             this->open = false;
             this->DoorInterface::Update();
-            reply.Send();
+            reply->Send();
         } else {
             cout << "\t... but it was already closed." << endl;
             /* Send an error with a description */
-            reply.SendError("org.allseenalliance.sample.Door.CloseError", "Could not close the door, already closed");
+            reply->SendError("org.allseenalliance.sample.Door.CloseError", "Could not close the door, already closed");
         }
         cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
@@ -182,7 +183,9 @@ int main(int argc, char** argv)
 
     string path_root = "/Door/";
     for (int i = 1; i < argc; ++i) {
-        string path = path_root + std::to_string(i);
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "%s%d", path_root.c_str(), i);
+        string path = string(buffer);
         std::unique_ptr<Door> door = std::unique_ptr<Door>(new Door(advertiser, argv[i], false, path.c_str()));
 
         if (ER_OK == door->GetStatus()) {

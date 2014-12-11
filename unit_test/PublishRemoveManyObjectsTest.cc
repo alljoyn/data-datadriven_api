@@ -36,7 +36,7 @@ using namespace::test_unit_common;
  *       -# Verify that properties of all removed test objects are still accessible and that method calls cannot be carried out
  * */
 TEST(PublishRemoveManyObjects, Default) {
-    int numPubObjs = 500; //Increase for stress testing
+    unsigned int numPubObjs = 500; //Increase for stress testing
     shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     std::vector<unique_ptr<TestObject> > tos;
     qcc::String testObjName;
@@ -48,15 +48,20 @@ TEST(PublishRemoveManyObjects, Default) {
 
     ASSERT_TRUE(obs->GetStatus() == ER_OK);
 
-    for (int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObject" + to_string(i)).c_str();
+    for (unsigned int i = 0; i < numPubObjs; i++) {
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObject%d", i);
+        testObjName = qcc::String(buffer);
         tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
         ASSERT_TRUE(tos.back()->UpdateAll() == ER_OK);
     }
     testObjectListener.WaitOnUpdate(numPubObjs);
+    ASSERT_EQ(obs->Size(), numPubObjs);
 
-    for (int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObject" + to_string(i)).c_str();
+    for (unsigned int i = 0; i < numPubObjs; i++) {
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObject%d", i);
+        testObjName = qcc::String(buffer);
         std::map<qcc::String,
                  std::shared_ptr<SimpleTestObjectProxy> >::iterator itr = testObjectListener.nameToObjects.find(
             testObjName);
@@ -87,8 +92,9 @@ TEST(PublishRemoveManyObjects, Default) {
         i->RemoveFromBus();
     }
     testObjectListener.WaitOnRemove(numPubObjs);
+    ASSERT_EQ(obs->Size(), 0u);
 
-    EXPECT_TRUE((int)testObjectListener.removedObjectNames.size() == numPubObjs);
+    EXPECT_TRUE(testObjectListener.removedObjectNames.size() == numPubObjs);
 
     /*
      * Check that method calls on removed objects are returning a proper error code and that

@@ -76,16 +76,20 @@ buildroot = ddenv.subst('build/${OS}/${CPU}/${VARIANT}')
 libs = ddenv.SConscript('$DD_OBJDIR/lib/SConscript', exports = {'env':ddenv})
 ddenv.Install('$DD_DISTDIR/lib', libs)
 ddenv.Install('$DD_DISTDIR/inc/datadriven', ddenv.Glob('inc/datadriven/*.h'))
+ddenv.Install('$DD_DISTDIR/inc/datadriven/posix', ddenv.Glob('inc/datadriven/posix/*.h'))
+
 
 # Remove this condition when codegen supports ddcpp
 if from_alljoyn_core == 0:
     # Sample building
-    samples = ddenv.SConscript('$DD_OBJDIR/samples/SConscript', exports = {'env':ddenv})
-    ddenv.Install('$DD_DISTDIR/bin/samples', samples)
+    if ddenv['BUILD_SAMPLES'] == 'on':
+        samples = ddenv.SConscript('$DD_OBJDIR/samples/SConscript', exports = {'env':ddenv})
+        ddenv.Install('$DD_DISTDIR/bin/samples', samples)
 
-    # tests building (not installed)
-    unittests = ddenv.SConscript('$DD_OBJDIR/unit_test/SConscript', exports= {'env':ddenv})
-    tests = ddenv.SConscript('$DD_OBJDIR/test/SConscript', exports= {'env':ddenv})
+    if ddenv['BUILD_TESTS'] == 'on':
+        # tests building (not installed)
+        unittests = ddenv.SConscript('$DD_OBJDIR/unit_test/SConscript', exports= {'env':ddenv})
+        tests = ddenv.SConscript('$DD_OBJDIR/test/SConscript', exports= {'env':ddenv})
 else:
     print 'Not building datadriven_api samples due to codegen incompatibility'
 

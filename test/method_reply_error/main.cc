@@ -42,23 +42,23 @@ class Methods :
     }
 
   protected:
-    void Normal(NormalReply& _reply)
+    void Normal(std::shared_ptr<NormalReply> _reply)
     {
         cout << "Provider sending Normal reply" << endl;
-        _reply.Send();
+        _reply->Send();
     }
 
-    void Error(ErrorReply& _reply)
+    void Error(std::shared_ptr<ErrorReply> _reply)
     {
         cout << "Provider sending Error reply" << endl;
-        _reply.SendError("org.allseenalliance.test.MethodReplyError.Error",
-                         "This is an error string with description");
+        _reply->SendError("org.allseenalliance.test.MethodReplyError.Error",
+                          "This is an error string with description");
     }
 
-    void ErrorCode(ErrorCodeReply& _reply)
+    void ErrorCode(std::shared_ptr<ErrorCodeReply> _reply)
     {
         cout << "Provider sending ErrorCode reply" << endl;
-        _reply.SendErrorCode(ER_WARNING);
+        _reply->SendErrorCode(ER_WARNING);
     }
 };
 

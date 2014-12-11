@@ -18,11 +18,39 @@
 #include <datadriven/Marshal.h>
 
 #include "RegisteredTypeDescription.h"
+#include "ObserverManager.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_CONSUMER"
 
 namespace datadriven {
+class MethodTask :
+    public ObserverManager::Task {
+  public:
+    MethodTask(std::weak_ptr<MethodInvocationBase> inv) :
+        inv(inv) { }
+
+    void Execute() const
+    {
+        std::shared_ptr<MethodInvocationBase> invoc = inv.lock();
+        if (invoc) {
+            invoc->HandleReply();
+        }
+    }
+
+  private:
+    std::weak_ptr<MethodInvocationBase> inv;
+};
+
+void MethodInvocationBase::ScheduleMethodReplyListener()
+{
+    std::shared_ptr<ObserverManager> mgr = ObserverManager::GetInstance();
+    if (mgr) {
+        MethodTask* task = new MethodTask(shared_this);
+        mgr->Enqueue(task);
+    }
+}
+
 MethodInvocationBase::MethodInvocationBase() :
     shared_this(nullptr),
     state(WAITING),
@@ -48,6 +76,11 @@ MethodInvocationBase::MethodInvocationBase(MethodInvocationBase && inv) :
 void MethodInvocationBase::SetRefCountedPtr(std::shared_ptr<MethodInvocationBase> inv)
 {
     shared_this = inv;
+}
+
+void MethodInvocationBase::UnsetRefCountedPtr()
+{
+    shared_this = nullptr;
 }
 
 MethodInvocationBase::InvState MethodInvocationBase::GetState() const
@@ -162,11 +195,11 @@ void MethodInvocationBase::OnReplyMessage(ajn::Message& message, void* context)
         GetConsumerMethodReply().SetErrorName(errorName);
         GetConsumerMethodReply().SetErrorDescription(errorDescription);
         SetReplyStatus(status);
+        ScheduleMethodReplyListener();
         if (nullptr != sem) {
             sem->Post();
         }
     }
-    shared_this = nullptr; // no longer needed
 }
 
 /** \private
@@ -214,7 +247,7 @@ void MethodInvocationBase::OnGetProperty(QStatus status,
     if (nullptr != sem) {
         sem->Post();
     }
-    shared_this = nullptr; // no longer needed
+    UnsetRefCountedPtr();
 }
 
 /** \private
@@ -256,6 +289,6 @@ void MethodInvocationBase::OnSetProperty(QStatus status,
     if (nullptr != sem) {
         sem->Post();
     }
-    shared_this = nullptr; // no longer needed
+    UnsetRefCountedPtr();
 }
 }

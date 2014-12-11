@@ -14,10 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/GUID.h>
+#include <alljoyn/services_common/GuidUtil.h>
 
 #include <datadriven/ProvidedInterface.h>
 #include <datadriven/ProvidedObject.h>
+
+#include <algorithm>
 
 #include "BusConnectionImpl.h"
 #include "ObjectAdvertiserImpl.h"
@@ -80,7 +82,9 @@ ProvidedObjectImpl::~ProvidedObjectImpl()
 
 qcc::String ProvidedObjectImpl::GeneratePath()
 {
-    return "/O" + qcc::GUID128().ToString();
+    qcc::String guid;
+    ajn::services::GuidUtil::GetInstance()->GenerateGUID(&guid);
+    return "/O" + guid;
 }
 
 QStatus ProvidedObjectImpl::Register()
@@ -116,16 +120,22 @@ void ProvidedObjectImpl::CallMethodHandler(ajn::MessageReceiver::MethodHandler h
         // of the DDAPI and we use the mechanism of BusObject.h
         (this->*handler)(member, message);
     } else {
-        ajn::MessageReceiver* ctxObject = static_cast<ajn::MessageReceiver*>(context);
-        std::shared_ptr<ObjectAdvertiserImpl> advertiser = objectAdvertiserImpl.lock();
-        if (advertiser) {
-            advertiser->ProviderAsyncEnqueue(new MethodHandlerTask(objectAdvertiserImpl,
-                                                                   self,
-                                                                   ctxObject,
-                                                                   handler,
-                                                                   member,
-                                                                   message));
+        qcc::String name = member->iface->GetName();
+        mutex.Lock();
+        std::vector<qcc::String>::iterator it = std::find(interfaceNames.begin(), interfaceNames.end(), name);
+        if (it != interfaceNames.end()) {
+            ajn::MessageReceiver* ctxObject = static_cast<ajn::MessageReceiver*>(context);
+            std::shared_ptr<ObjectAdvertiserImpl> advertiser = objectAdvertiserImpl.lock();
+            if (advertiser) {
+                advertiser->ProviderAsyncEnqueue(new MethodHandlerTask(objectAdvertiserImpl,
+                                                                       self,
+                                                                       ctxObject,
+                                                                       handler,
+                                                                       member,
+                                                                       message));
+            }
         }
+        mutex.Unlock();
     }
 }
 
@@ -164,7 +174,7 @@ QStatus ProvidedObjectImpl::EmitSignal(const ajn::InterfaceDescription::Member& 
     if (advertiser) {
         QCC_DbgPrintf(("Emitting signal '%s' in interface '%s' for bus object at path '%s'",
                        signal.name.c_str(), signal.iface->GetName(), GetPath()));
-        status = Signal(NULL, 0, signal, args, numArgs, 0, ajn::ALLJOYN_FLAG_GLOBAL_BROADCAST);
+        status = Signal(NULL, ajn::SESSION_ID_ALL_HOSTED, signal, args, numArgs, 0, 0);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to emit signal '%s' in interface '%s' for bus object at path '%s'",
                                   signal.name.c_str(), signal.iface->GetName(), GetPath()));
@@ -200,7 +210,19 @@ const std::vector<qcc::String>& ProvidedObjectImpl::GetInterfaceNames() const
 
 void ProvidedObjectImpl::AddInterfaceName(const qcc::String& name)
 {
+    mutex.Lock();
     interfaceNames.push_back(name);
+    mutex.Unlock();
+}
+
+void ProvidedObjectImpl::RemoveInterfaceName(const qcc::String& name)
+{
+    mutex.Lock();
+    std::vector<qcc::String>::iterator it = std::find(interfaceNames.begin(), interfaceNames.end(), name);
+    if (it != interfaceNames.end()) {
+        interfaceNames.erase(it);
+    }
+    mutex.Unlock();
 }
 
 const char* ProvidedObjectImpl::GetPath() const

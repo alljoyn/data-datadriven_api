@@ -19,7 +19,7 @@
 
 #include <vector>
 
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/ProxyBusObject.h>
@@ -170,7 +170,7 @@ class ProxyInterface {
     ObjectId objId;
     ajn::ProxyBusObject proxyBusObject;
     bool alive;   /* alternatively we could retrieve this from the reader cache */
-    mutable qcc::Mutex mutex;
+    mutable datadriven::Mutex mutex;
 
     ajn::ProxyBusObject::PropertiesChangedListener* propChangedListener;
 

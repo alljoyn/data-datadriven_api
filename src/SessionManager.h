@@ -22,7 +22,7 @@
 #include <memory>
 
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Session.h>
@@ -244,7 +244,7 @@ class SessionManager :
     /**
      * Internal mutex to protect internal data structures from concurrent access
      */
-    mutable qcc::Mutex mutex;
+    mutable datadriven::Mutex mutex;
 
     /**
      * The status of the session manager.

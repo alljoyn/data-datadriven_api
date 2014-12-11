@@ -17,8 +17,8 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
-#include <qcc/Condition.h>
-#include <qcc/Mutex.h>
+#include <datadriven/Condition.h>
+#include <datadriven/Mutex.h>
 
 namespace datadriven {
 /**
@@ -37,7 +37,7 @@ class Semaphore {
      *
      * \param[in] initial The initial value for the semaphore.
      */
-    Semaphore(int initial);
+    Semaphore(unsigned int initial);
 
     /**
      * Destruct the semaphore.  Before calling this ensure that no one is
@@ -78,9 +78,9 @@ class Semaphore {
     QStatus TimedWait(uint32_t ms);
 
   private:
-    int value;
-    qcc::Condition cond;
-    qcc::Mutex mutex;
+    unsigned int value;
+    datadriven::Condition cond;
+    datadriven::Mutex mutex;
 
     // prevent copy by construction or assignment
     Semaphore(const Semaphore& other);

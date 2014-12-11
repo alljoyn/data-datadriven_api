@@ -23,7 +23,7 @@
 #include <vector>
 
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <alljoyn/version.h>
 #include <alljoyn/Session.h>
@@ -78,12 +78,12 @@ class ObjectAdvertiserImpl :
     mutable ajn::services::AsyncTaskQueue providerAsync;
 
     /** Mutex that protects the providers set */
-    mutable qcc::Mutex providersMutex;
+    mutable datadriven::Mutex providersMutex;
     /** Set of provided objects advertised by this advertiser */
     std::set<std::weak_ptr<ProvidedObjectImpl>, std::owner_less<std::weak_ptr<ProvidedObjectImpl> > > providers;
 
     /* Mutex to protect AboutService internals */
-    mutable qcc::Mutex aboutMutex;
+    mutable datadriven::Mutex aboutMutex;
 
     std::shared_ptr<BusConnectionImpl> busConnection;
     QStatus errorStatus;

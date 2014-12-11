@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "init_data.h"
+#include <cstdio>
 
 namespace test_system_alltypes {
 template <> void init_data<bool>(bool& b,
@@ -28,7 +29,9 @@ template <> void init_data<qcc::String>(qcc::String& s,
                                         size_t nelem,
                                         long long& cnt)
 {
-    s = std::to_string(++cnt).c_str();
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "%lld", ++cnt);
+    s = qcc::String(buffer);
 }
 
 template <> void init_data<datadriven::Signature>(datadriven::Signature& s,
@@ -42,7 +45,9 @@ template <> void init_data<datadriven::ObjectPath>(datadriven::ObjectPath& o,
                                                    size_t nelem,
                                                    long long& cnt)
 {
-    o = ("/path/" + std::to_string(++cnt)).c_str();
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "/path/%lld", ++cnt);
+    o = qcc::String(buffer);
 }
 
 template <> void init_data<ajn::MsgArg>(ajn::MsgArg& v,

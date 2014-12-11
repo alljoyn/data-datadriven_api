@@ -83,6 +83,25 @@ void ObserverCache::NotifyObserver(std::weak_ptr<ObserverBase> observer)
     mutex.Unlock();
 }
 
+void ObserverCache::NotifyObjectExistence(std::shared_ptr<ProxyInterface> proxyObj, bool add)
+{
+    if (nullptr != proxyObj) {
+        // Notify All observers
+        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
+             vectorIterator != observers.end();
+             vectorIterator++) {
+            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
+            if (observer) {
+                if (add) {
+                    observer->AddObject(proxyObj);
+                } else {
+                    observer->RemoveObject(proxyObj);
+                }
+            }
+        }
+    }
+}
+
 void ObserverCache::SetAllocator(std::weak_ptr<ObjectAllocator> alloc)
 {
     allocator = alloc;
@@ -138,17 +157,6 @@ std::shared_ptr<ProxyInterface> ObserverCache::AddObject(const ObjectId& objId)
     }
     mutex.Unlock();
 
-    if (nullptr != proxyObj) {
-        // Notify All observers
-        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
-             vectorIterator != observers.end();
-             vectorIterator++) {
-            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
-            if (observer) {
-                observer->AddObject(proxyObj);
-            }
-        }
-    }
     return proxyObj;
 }
 
@@ -173,17 +181,6 @@ std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objI
                    objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
     GarbageCollect();         /* TODO: not always trigger this */
 
-    if (nullptr != proxyObj) {
-        // Notify All observers
-        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
-             vectorIterator != observers.end();
-             vectorIterator++) {
-            std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
-            if (observer) {
-                observer->RemoveObject(proxyObj);
-            }
-        }
-    }
     return proxyObj;
 }
 

@@ -62,8 +62,8 @@ ProvidedObject::State ProvidedObject::GetState()
 }
 
 QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterface,
-                                             MethodCallbacks handlers[],
-                                             size_t numHandlers)
+                                             MethodCallbacks callbacks[],
+                                             size_t numCallbacks)
 {
     QStatus status = ER_OK;
 
@@ -89,14 +89,13 @@ QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterfac
                 qcc::String ifName = reg->GetDescription().GetName();
 
                 interfaces[ifName] = providedInterface;
-                // Update
                 providedObjectImpl->AddInterfaceName(ifName);
             }
         }
 
         if (ER_OK == status) {
-            for (size_t i = 0; (ER_OK == status) && (i < numHandlers); ++i) {
-                MethodCallbacks& mh = handlers[i];
+            for (size_t i = 0; (ER_OK == status) && (i < numCallbacks); ++i) {
+                MethodCallbacks& mh = callbacks[i];
                 status = providedObjectImpl->AddMethodHandlerToBus(&reg->GetMember(
                                                                        mh.memberId), mh.handler, providedInterface);
             }
@@ -106,6 +105,17 @@ QStatus ProvidedObject::AddProvidedInterface(ProvidedInterface* providedInterfac
         QCC_LogError(status, ("Failed to add published interface"));
     }
     return status;
+}
+
+void ProvidedObject::RemoveProvidedInterface(ProvidedInterface* providedInterface)
+{
+    if (NULL != providedInterface) {
+        const RegisteredTypeDescription* reg = providedInterface->GetRegisteredTypeDescription();
+        qcc::String ifName = reg->GetDescription().GetName();
+
+        interfaces.erase(ifName);
+        providedObjectImpl->RemoveInterfaceName(ifName);
+    }
 }
 
 const char* ProvidedObject::GetPath() const

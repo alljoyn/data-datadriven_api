@@ -33,12 +33,12 @@ class Provider::MultiPeerObject :
         this->id = num;
     }
 
-    void RequestEmitNum(int32_t num, RequestEmitNumReply& _reply)
+    void RequestEmitNum(int32_t num, std::shared_ptr<RequestEmitNumReply> _reply)
     {
         cout << "Provider " << provId << " got request for signal emit with number "
              << num << " on object with id " << id << endl;
         EmitNum(num);
-        _reply.Send();
+        _reply->Send();
     }
 
   private:

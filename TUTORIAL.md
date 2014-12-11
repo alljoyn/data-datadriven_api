@@ -333,23 +333,25 @@ always derive *first* from `ProvidedObject` and *then* from the generated
 interface classes.
 
 In our `Door` class, we must provide concrete implementations of the methods
-defined in the Door interface.
+defined in the Door interface. These methods have the reply object as a shared
+pointer, to allow the reply to be send from outside the method itself. This
+way the method call does not necessarily block.
 
 ~~~ {.cpp}
-void Door::Open(OpenReply& reply)
+void Door::Open(shared_ptr<OpenReply> reply)
 {
     if (this->open) {
         /* door already open, so return an error */
-        reply.SendErrorCode(ER_FAIL);
+        reply->SendErrorCode(ER_FAIL);
     } else {
         /* OK, we can open it. */
         this->open = true; /* update the observable properties */
         this->DoorInterface::Update(); /* let the world know we are in a new consistent state */
-        reply.Send(); /* notify caller of completion (no output arguments) */
+        reply->Send(); /* notify caller of completion (no output arguments) */
     }
 }
 
-void Door::Close(CloseReply& reply)
+void Door::Close(shared_ptr<CloseReply> reply)
 {
     /* exercise left to the reader */
 }
@@ -685,3 +687,58 @@ thread in either A or B could result in a distributed deadlock.
 The README.md file that is part of the source code distribution of the DDAPI
 contains instructions on how to build applications against the DDAPI.
 
+## Data-driven API and plain AllJoyn interoperability
+
+### Using both in a single application
+
+It is possible to use the data-driven API together with the AllJoyn API in a
+single application.  You should however take some things into consideration
+when constructing and destructing an ObjectAdvertiser and Observer.
+- The bus attachment should be created using the AllJoyn API.
+- If the application uses the AboutService, a property store should be created
+  using the AllJoyn API.
+- The created bus attachment and property store (optional) should be passed as
+  arguments when creating any ObjectAdvertiser or Observer in the application.
+~~~ {.cpp}
+BusAttachment* bus = NULL;
+AboutPropertyStoreImpl* store = NULL;
+
+/* ... create bus attachment and/or property store */
+
+shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create(bus, store);
+shared_ptr<datadriven::Observer<DoorProxy> > observer = Observer::Create(&dl, bus);
+
+/* ... */
+~~~
+- When stopping the application, the bus attachment should be stopped before
+  cleaning up any ObjectAdvertiser or Observer.  This is needed to prevent the
+  arrival of any pending signals or method calls while destructing the
+  data-driven API objects.
+~~~ {.cpp}
+/* ... stop bus attachment */
+
+bus->Disconnect();
+bus->Stop();
+bus->Join();
+
+/* ... clean up data-driven API objects */
+
+advertiser.reset();
+observer.reset();
+
+/* ... */
+~~~
+
+### Using the data-driven API to talk to a plain AllJoyn service
+
+For a data-driven client to be able to talk to a plain AllJoyn service, certain
+prerequisites need to be taken into account.  
+-# Properties in the service's interfaces should be modeled as *data*; i.e.:
+   - they should be annotated with *org.freedesktop.DBus.Property.EmitsChangedSignal*
+     set to *true*
+   - they should be emitted whenever their values change
+-# The session ID that is used when emitting signals (property changed or
+   others) should be one of:
+   - the special *SESSION_ID_ALL_HOSTED* session ID to emit on all sessions
+     hosted by the bus attachment
+   - the session ID zero to broadcast

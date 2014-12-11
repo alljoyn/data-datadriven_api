@@ -93,8 +93,7 @@ QStatus ProvidedInterface::SignalUpdate()
     invalidatedPropertiesMutex.Unlock();
     /* signal change */
     return object->EmitPropChanged(desc.GetName().c_str(), &propertyNames[0],
-                                   propertyNames.size(), 0,
-                                   ajn::ALLJOYN_FLAG_GLOBAL_BROADCAST);
+                                   propertyNames.size(), ajn::SESSION_ID_ALL_HOSTED, 0);
 }
 
 QStatus ProvidedInterface::EmitSignal(int signalNumber,

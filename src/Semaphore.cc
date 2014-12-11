@@ -26,7 +26,7 @@ Semaphore::Semaphore() :
 {
 }
 
-Semaphore::Semaphore(int initial) :
+Semaphore::Semaphore(unsigned int initial) :
     value(initial)
 {
 }
@@ -41,7 +41,7 @@ QStatus Semaphore::Post()
 
     mutex.Lock();
     value++;
-    status = cond.Broadcast();
+    status = cond.Signal();
     mutex.Unlock();
     return status;
 }
@@ -61,7 +61,9 @@ QStatus Semaphore::Wait()
     return status;
 }
 
-static struct timespec Now() {
+typedef struct timespec ts; // define to satisfy uncrustify
+static ts Now()
+{
     struct timespec now;
 
 #if defined(QCC_OS_DARWIN)

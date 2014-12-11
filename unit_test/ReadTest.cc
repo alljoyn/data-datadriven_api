@@ -28,9 +28,11 @@ class TestReadListener :
     public Observer<SimpleTestObjectProxy>::Listener {
   private:
     Semaphore& sem;
+    const qcc::String expectedOtherName;
 
   public:
     Observer<SimpleTestObjectProxy>* obs;
+    Observer<ExtensionProxy>* extobs;
     typedef std::set<std::shared_ptr<SimpleTestObjectProxy> > ObjectSet;
     ObjectSet objects;
 
@@ -46,18 +48,28 @@ class TestReadListener :
 
   public:
 
-    TestReadListener(Semaphore& _sem) :
-        sem(_sem), obs(nullptr)
+    TestReadListener(Semaphore& _sem,
+                     const qcc::String _expectedOtherName) :
+        sem(_sem), expectedOtherName(_expectedOtherName), obs(nullptr), extobs(nullptr)
     {
     }
 
-    void setObserver(Observer<SimpleTestObjectProxy>* obs)
+    void SetObserver(Observer<SimpleTestObjectProxy>* obs)
     {
         this->obs = obs;
     }
 
+    void SetObserver(Observer<ExtensionProxy>* extobs)
+    {
+        this->extobs = extobs;
+    }
+
     virtual void OnUpdate(const std::shared_ptr<SimpleTestObjectProxy>& p)
     {
+        const datadriven::ObjectId& id = p->GetObjectId();
+        std::shared_ptr<ExtensionProxy> ext = extobs->GetObject(id);
+        ASSERT_EQ(expectedOtherName, ext->GetProperties().othername);
+
         if (objects.find(p) == objects.end()) {
             objects.insert(p);
             ObjectSet read = iterate();
@@ -90,15 +102,20 @@ TEST(IterateFromCallback, Default) {
 
     ASSERT_TRUE(advertiser != nullptr);
 
-    TestReadListener testObjectListener(sem);
+    TestReadListener testObjectListener(sem, "hello world");
     std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(&testObjectListener);
-    testObjectListener.setObserver(obs.get());
+    testObjectListener.SetObserver(obs.get());
+
+    std::shared_ptr<Observer<ExtensionProxy> > extobs = Observer<ExtensionProxy>::Create(NULL);
+    testObjectListener.SetObserver(extobs.get());
 
     ASSERT_EQ(obs->GetStatus(), ER_OK);
 
     for (unsigned int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObject" + to_string(i)).c_str();
-        tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObject%d", i);
+        testObjName = qcc::String(buffer);
+        tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName, "hello world")));
 
         cout << testObjName.c_str() << " Initial State is : " << tos.back()->GetState() << endl;
         ASSERT_TRUE(tos.back()->UpdateAll() == ER_OK);

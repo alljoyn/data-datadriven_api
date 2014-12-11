@@ -61,7 +61,10 @@ template <typename T, typename Signal> class SignalListener;
  *   you're interested in appears on the bus, whenever the properties
  *   of a discovered object change, or whenever a previously discovered object
  *   disappears from the bus. Observer::Listener object is called <em>state
- *   change listener</em>.
+ *   change listener</em>. If this object would implement multiple AllJoyn interfaces,
+ *   you are guaranteed you can use every interface of the object from the moment
+ *   you are notified of the object's existence through an Observer::Listener on
+ *   one of its interfaces.
  * - if you provide SignalListener listeners via the
  *   Observer::AddSignalListener method, you'll be alerted whenever a
  *   discovered object emits the signal in question.

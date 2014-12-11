@@ -132,10 +132,13 @@ TEST(Destruction, ThirdScenario) {
     }
 
     for (int i = 0; i < numOfObjects; i++) {
-        testObjName = ("TestObjectBeforeConn" + to_string(i)).c_str();
+        char buffer[10];
+        snprintf(buffer, sizeof(buffer), "%d", i);
+        qcc::String objectNumber(buffer);
+        testObjName = ("TestObjectBeforeConn" + objectNumber).c_str();
         tosBeforeConn.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
 
-        testObjName = ("TestObjectAfterConn" + to_string(i)).c_str();
+        testObjName = ("TestObjectAfterConn" + objectNumber).c_str();
         tosAfterConn.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
 
         ASSERT_TRUE(tosBeforeConn.back()->UpdateAll() == ER_OK);

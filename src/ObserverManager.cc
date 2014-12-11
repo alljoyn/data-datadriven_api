@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
@@ -34,11 +34,10 @@ namespace datadriven {
 class ObserverManagerTask :
     public ObserverManager::Task {
   public:
-    ObserverManagerTask(std::weak_ptr<ObserverCache> observerCache,
-                        const qcc::String& ifName,
+    ObserverManagerTask(const std::vector<std::weak_ptr<ObserverCache> >& wcaches,
                         const ObjectId& objId,
                         ObserverManager::Action action) :
-        observerCache(observerCache), ifName(ifName), id(objId), action(action)
+        wcaches(wcaches), id(objId), action(action)
     { }
 
     virtual ~ObserverManagerTask()
@@ -46,17 +45,45 @@ class ObserverManagerTask :
 
     void Execute() const
     {
-        std::shared_ptr<ObserverCache> cache = observerCache.lock();
-        if (cache) {
+        typedef std::pair<std::shared_ptr<ObserverCache>, std::shared_ptr<ProxyInterface> > CacheProxyEntry;
+        typedef std::multimap<std::shared_ptr<ObserverCache>, std::shared_ptr<ProxyInterface> > CacheProxyMultiMap;
+        CacheProxyMultiMap usedcaches;
+        for (const std::weak_ptr<ObserverCache>& wcache : wcaches) {
+            std::shared_ptr<ObserverCache> cache = wcache.lock();
+            if (cache) {
+                switch (action) {
+                case ObserverManager::Action::ADD:
+                    {
+                        QCC_DbgPrintf(("Add object (%s, %s)", id.GetBusName().c_str(),
+                                       id.GetBusObjectPath().c_str()));
+                        CacheProxyEntry entry(cache, cache->AddObject(id));
+                        usedcaches.insert(entry);
+                        break;
+                    }
+
+                case ObserverManager::Action::REMOVE:
+                    {
+                        QCC_DbgPrintf(("Remove object (%s, %s)", id.GetBusName().c_str(),
+                                       id.GetBusObjectPath().c_str()));
+                        CacheProxyEntry entry(cache, cache->RemoveObject(id));
+                        usedcaches.insert(entry);
+                        break;
+                    }
+
+                default:
+                    break;
+                }
+            }
+        }
+
+        for (const CacheProxyEntry& entry : usedcaches) {
             switch (action) {
-            case ObserverManager::Action::ADD:
-                QCC_DbgPrintf(("Add object (%s, %s)", id.GetBusName().c_str(), id.GetBusObjectPath().c_str()));
-                cache->AddObject(id);
+            case ObserverManager::Action::ADD :
+                entry.first->NotifyObjectExistence(entry.second, true);
                 break;
 
             case ObserverManager::Action::REMOVE:
-                QCC_DbgPrintf(("Remove object (%s, %s)", id.GetBusName().c_str(), id.GetBusObjectPath().c_str()));
-                cache->RemoveObject(id);
+                entry.first->NotifyObjectExistence(entry.second, false);
                 break;
 
             default:
@@ -66,8 +93,7 @@ class ObserverManagerTask :
     }
 
   private:
-    std::weak_ptr<ObserverCache> observerCache;
-    qcc::String ifName;
+    std::vector<std::weak_ptr<ObserverCache> > wcaches;
     ObjectId id;
     ObserverManager::Action action;
 };
@@ -89,9 +115,11 @@ void ObserverManager::Enqueue(const Task* task)
     asyncTaskQueue.Enqueue(task);
 }
 
-std::shared_ptr<ObserverManager> ObserverManager::GetInstance(std::shared_ptr<BusConnectionImpl> busConnection)
+std::shared_ptr<ObserverManager> ObserverManager::GetInstance(std::shared_ptr<
+                                                                  BusConnectionImpl>
+                                                              busConnection)
 {
-    static qcc::Mutex mutex;
+    static datadriven::Mutex mutex;
     static std::weak_ptr<ObserverManager> instance;
     std::shared_ptr<ObserverManager> sharedInstance = nullptr;
 
@@ -139,13 +167,16 @@ void ObserverManager::Stop()
     cachesMutex.Lock();
     QCC_DbgPrintf(("Stop observer manager"));
     sessionMgr->UnregisterListener(this);
-    for (ObserverCacheMap::iterator iterator = caches.begin(); iterator != caches.end(); iterator++) {
+    for (ObserverCacheMap::iterator iterator = caches.begin();
+         iterator != caches.end();
+         iterator++) {
         RemoveAnnounceHandler(iterator->first);
     }
     cachesMutex.Unlock();
 }
 
-QStatus ObserverManager::RegisterObserver(std::weak_ptr<ObserverBase> observer, qcc::String ifName)
+QStatus ObserverManager::RegisterObserver(std::weak_ptr<ObserverBase> observer,
+                                          qcc::String ifName)
 {
     QStatus status = ER_OK;
     bool newCache = false;
@@ -190,7 +221,8 @@ QStatus ObserverManager::RegisterObserver(std::weak_ptr<ObserverBase> observer, 
     return status;
 }
 
-void ObserverManager::UnregisterObserver(std::weak_ptr<ObserverBase> observer, qcc::String ifName)
+void ObserverManager::UnregisterObserver(std::weak_ptr<ObserverBase> observer,
+                                         qcc::String ifName)
 {
     cachesMutex.Lock();
     ObserverCacheMap::iterator iterator = caches.find(ifName);
@@ -250,29 +282,42 @@ QStatus ObserverManager::RemoveAnnounceHandler(const qcc::String ifName)
     return status;
 }
 
-void ObserverManager::AddObject(const qcc::String ifName, const ObjectId& objectId)
+std::vector<std::weak_ptr<ObserverCache> > ObserverManager::GetObserverCaches(const std::vector<qcc::String>& ifNames)
+const
+{
+    std::vector<std::weak_ptr<ObserverCache> > wcaches;
+    for (qcc::String ifName : ifNames) {
+        std::map<const qcc::String, std::shared_ptr<ObserverCache> >::const_iterator it = caches.find(ifName);
+        if (it != caches.end()) {
+            wcaches.push_back(it->second);
+        }
+    }
+
+    return wcaches;
+}
+
+void ObserverManager::AddObject(const std::vector<qcc::String>& ifNames,
+                                const ObjectId& objectId)
 {
     QCC_DbgPrintf(("Start async task to add object (%s, %s)", objectId.GetBusName().c_str(),
                    objectId.GetBusObjectPath().c_str()));
-    ObserverCacheMap::const_iterator iterator = caches.find(ifName);
-    if (iterator != caches.end()) {
-        ObserverManagerTask* taskData = new ObserverManagerTask(iterator->second, ifName, objectId, Action::ADD);
-        asyncTaskQueue.Enqueue(taskData);
-    }
+    ObserverManagerTask* taskData =
+        new ObserverManagerTask(GetObserverCaches(ifNames), objectId, Action::ADD);
+    asyncTaskQueue.Enqueue(taskData);
 }
 
-void ObserverManager::RemoveObject(const qcc::String ifName, const ObjectId& objectId)
+void ObserverManager::RemoveObject(const std::vector<qcc::String>& ifNames,
+                                   const ObjectId& objectId)
 {
     QCC_DbgPrintf(("Start async task to remove object (%s, %s)", objectId.GetBusName().c_str(),
                    objectId.GetBusObjectPath().c_str()));
-    ObserverCacheMap::const_iterator iterator = caches.find(ifName);
-    if (iterator != caches.end()) {
-        ObserverManagerTask* taskData = new ObserverManagerTask(iterator->second, ifName, objectId, Action::REMOVE);
-        asyncTaskQueue.Enqueue(taskData);
-    }
+    ObserverManagerTask* taskData =
+        new ObserverManagerTask(GetObserverCaches(ifNames), objectId, Action::REMOVE);
+    asyncTaskQueue.Enqueue(taskData);
 }
 
-void ObserverManager::PopulateCache(std::shared_ptr<ObserverCache> cache, const qcc::String& ifName)
+void ObserverManager::PopulateCache(std::shared_ptr<ObserverCache> cache,
+                                    const qcc::String& ifName)
 {
     objectsMutex.Lock();
     ObjectDescriptionsMap::const_iterator it = discoveredObjects.begin();
@@ -289,7 +334,8 @@ void ObserverManager::PopulateCache(std::shared_ptr<ObserverCache> cache, const 
                 if (sessionMgr->IsSessionEstablished(busName, port)) {
                     ajn::SessionId sessionId;
                     if (sessionMgr->GetSessionId(busName, port, sessionId)) {
-                        ObjectId objId(busConnection->GetBusAttachment(), busName, itDescription->first, sessionId);
+                        ObjectId objId(busConnection->GetBusAttachment(), busName,
+                                       itDescription->first, sessionId);
                         QCC_DbgPrintf(("Add object (%s, %s)", objId.GetBusName().c_str(),
                                        objId.GetBusObjectPath().c_str()));
                         cache->AddObject(objId);
@@ -312,27 +358,22 @@ void ObserverManager::ObjectDescriptionsDifference(const qcc::String& busName,
 {
     ObjectDescriptions difference;
 
-    std::set_difference(odA.begin(), odA.end(), odB.begin(), odB.end(), inserter(difference, difference.end()));
+    std::set_difference(odA.begin(), odA.end(), odB.begin(), odB.end(),
+                        inserter(difference, difference.end()));
 
-    for (ObjectDescriptions::const_iterator it = difference.begin(); it != difference.end(); ++it) {
+    for (ObjectDescriptions::const_iterator it = difference.begin();
+         it != difference.end();
+         ++it) {
+        ObjectId objId(busConnection->GetBusAttachment(), busName, it->first, sessionId);
         const std::vector<qcc::String>& objectInterfaces = it->second;
+        switch (action) {
+        case Action::ADD:
+            AddObject(objectInterfaces, objId);
+            break;
 
-        for (std::vector<qcc::String>::const_iterator intfIt = objectInterfaces.begin();
-             intfIt != objectInterfaces.end();
-             ++intfIt) {
-            qcc::String intfName = *intfIt;
-            if (caches.end() != caches.find(intfName)) {
-                ObjectId objId(busConnection->GetBusAttachment(), busName, it->first, sessionId);
-                switch (action) {
-                case Action::ADD:
-                    AddObject(intfName, objId);
-                    break;
-
-                case Action::REMOVE:
-                    RemoveObject(intfName, objId);
-                    break;
-                }
-            }
+        case Action::REMOVE:
+            RemoveObject(objectInterfaces, objId);
+            break;
         }
     }
 }
@@ -347,9 +388,13 @@ void ObserverManager::Announce(unsigned short version,
     objectsMutex.Lock();
 
 #if 0
-    for (ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); it++) {
+    for (ObjectDescriptions::const_iterator it = objectDescs.begin();
+         it != objectDescs.end();
+         it++) {
         QCC_DbgPrintf(("-- for obj '%s'", it->first.c_str()));
-        for (std::vector<qcc::String>::const_iterator itObj = it->second.begin(); itObj != it->second.end(); itObj++) {
+        for (std::vector<qcc::String>::const_iterator itObj = it->second.begin();
+             itObj != it->second.end();
+             itObj++) {
             QCC_DbgPrintf(("---- interface '%s'", (*itObj).c_str()));
         }
     }
@@ -369,7 +414,8 @@ void ObserverManager::Announce(unsigned short version,
             assert(discoveredObjects.find(session) != discoveredObjects.end());
             const ObjectDescriptions& old = discoveredObjects[session];
 
-            ObjectDescriptionsDifference(busName, sessionId, old, objectDescs, Action::REMOVE);
+            ObjectDescriptionsDifference(busName, sessionId, old, objectDescs,
+                                         Action::REMOVE);
             ObjectDescriptionsDifference(busName, sessionId, objectDescs, old, Action::ADD);
         }
         if (discovered) {
@@ -383,7 +429,8 @@ void ObserverManager::Announce(unsigned short version,
     objectsMutex.Unlock();
 }
 
-void ObserverManager::OnSessionEstablished(const SessionManager::Session& session, const ajn::SessionId& sessionId)
+void ObserverManager::OnSessionEstablished(const SessionManager::Session& session,
+                                           const ajn::SessionId& sessionId)
 {
     QCC_DbgPrintf(("Session established for '%s'", session.GetBusName().c_str()));
     objectsMutex.Lock();
@@ -391,11 +438,13 @@ void ObserverManager::OnSessionEstablished(const SessionManager::Session& sessio
     ObjectDescriptionsMap::const_iterator it = discoveredObjects.find(session);
     assert(it != discoveredObjects.end());
 
-    ObjectDescriptionsDifference(session.GetBusName(), sessionId, it->second, empty, Action::ADD);
+    ObjectDescriptionsDifference(session.GetBusName(), sessionId, it->second, empty,
+                                 Action::ADD);
     objectsMutex.Unlock();
 }
 
-void ObserverManager::OnSessionLost(const SessionManager::Session& session, const ajn::SessionId& sessionId)
+void ObserverManager::OnSessionLost(const SessionManager::Session& session,
+                                    const ajn::SessionId& sessionId)
 {
     QCC_DbgPrintf(("Session lost for '%s'", session.GetBusName().c_str()));
     objectsMutex.Lock();
@@ -403,7 +452,8 @@ void ObserverManager::OnSessionLost(const SessionManager::Session& session, cons
     ObjectDescriptionsMap::const_iterator it = discoveredObjects.find(session);
     assert(it != discoveredObjects.end());
 
-    ObjectDescriptionsDifference(session.GetBusName(), sessionId, it->second, empty, Action::REMOVE);
+    ObjectDescriptionsDifference(session.GetBusName(), sessionId, it->second, empty,
+                                 Action::REMOVE);
     objectsMutex.Unlock();
 }
 }

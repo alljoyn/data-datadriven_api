@@ -17,6 +17,7 @@ Import('env')
 libenv = env.Clone()
 
 srcs = Glob('*.cc')
+srcs.append(Glob('common/os/posix/*.cc'))
 
 libs = []
 

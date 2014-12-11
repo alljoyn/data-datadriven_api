@@ -21,7 +21,7 @@
 #include <map>
 #include <set>
 
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
@@ -222,7 +222,7 @@ class ProvidedInterface :
     std::set<const char*> invalidatedProperties;
 
     /** Protects the invalidatedProperties set. */
-    mutable qcc::Mutex invalidatedPropertiesMutex;
+    mutable datadriven::Mutex invalidatedPropertiesMutex;
 
     /**
      * \private

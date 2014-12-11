@@ -135,13 +135,21 @@ class ProvidedObject  {
 
     /** \private
      * Add an interface with its callback listeners to the ProvidedObject
-     * \param[in] iface Interface to be added
+     * \param[in] providedInterface Interface to be added
      * \param[in] callbacks List of method callbacks for the interface required by the underlying communication layer
      * \param[in] numCallbacks Number of callback methods to consider
      * \retval ER_OK on success
      * \retval others on failure
      */
-    QStatus AddProvidedInterface(ProvidedInterface * iface, MethodCallbacks callbacks[], size_t numCallbacks);
+    QStatus AddProvidedInterface(ProvidedInterface * providedInterface,
+                                 MethodCallbacks callbacks[],
+                                 size_t numCallbacks);
+
+    /** \private
+     * Remove an interface with its callback listeners from the ProvidedObject
+     * \param[in] providedInterface Interface to be removed
+     */
+    void RemoveProvidedInterface(ProvidedInterface* providedInterface);
 
     /**
      * \brief Get the object's <em>object path</em>.

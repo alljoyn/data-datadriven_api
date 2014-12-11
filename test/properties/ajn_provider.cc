@@ -156,12 +156,12 @@ class AJNPropertiesProvider :
             }
             if (0 == strcmp(propName, PROP_ET)) {
                 propEmitTrue = val.v_int32;
-                EmitPropChanged(IFACE, propName, val, 0, ajn::ALLJOYN_FLAG_GLOBAL_BROADCAST);
+                EmitPropChanged(IFACE, propName, val, SESSION_ID_ALL_HOSTED, 0);
                 break;
             }
             if (0 == strcmp(propName, PROP_EI)) {
                 propEmitInvalidates = val.v_int32;
-                EmitPropChanged(IFACE, propName, val, 0, ajn::ALLJOYN_FLAG_GLOBAL_BROADCAST);
+                EmitPropChanged(IFACE, propName, val, SESSION_ID_ALL_HOSTED, 0);
                 break;
             }
             if (0 == strcmp(propName, PROP_EF)) {

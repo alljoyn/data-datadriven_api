@@ -65,6 +65,8 @@ class ObserverCache {
 
     /**
      * Add a new object identified by \a objId to the cache using \a allocator
+     * This does not notify the application, only updates the cache.
+     * Use the NotifyObjectExistence method to trigger the application.
      *
      * \param objId the object identifier
      * \return the new proxy interface object
@@ -73,6 +75,8 @@ class ObserverCache {
 
     /**
      * Remove an object identified by \a objId
+     * This does not notify the application, only updates the cache.
+     * Use the NotifyObjectExistence method to trigger the application.
      *
      * \param objId the object identifier
      * \return the removed proxy interface object
@@ -81,6 +85,7 @@ class ObserverCache {
 
     /**
      * Update an object identified by \a objId to the cache using \a dict
+     * This does notify the application.
      *
      * \param objId the object identifier
      * \param dict the updated properties
@@ -88,6 +93,15 @@ class ObserverCache {
      */
     std::shared_ptr<ProxyInterface> UpdateObject(const ObjectId& objId,
                                                  const ajn::MsgArg* dict);
+
+    /**
+     * Trigger the application when an object was added or removed.
+     *
+     * \param obj proxy interface
+     * \param add added/removed
+     */
+    void NotifyObjectExistence(std::shared_ptr<ProxyInterface> obj,
+                               bool add);
 
     /**
      * This will return, by definition, a living object
@@ -117,7 +131,7 @@ class ObserverCache {
 
     ObjectIdToSharedPtrMap livingObjects;
     ObjectIdToWeakPtrMap deadObjects;         /* aka the graveyard */
-    mutable qcc::Mutex mutex;         /* is recursive */
+    mutable datadriven::Mutex mutex;         /* is recursive */
 
     /**
      * The name of the interface for which this cache is created

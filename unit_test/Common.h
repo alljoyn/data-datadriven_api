@@ -21,6 +21,8 @@
 #include <datadriven/Semaphore.h>
 #include <SimpleTestObjectInterface.h>
 #include <SimpleTestObjectProxy.h>
+#include <ExtensionInterface.h>
+#include <ExtensionProxy.h>
 #include <VarTestObjectInterface.h>
 #include <VarTestObjectProxy.h>
 #undef QCC_MODULE
@@ -42,23 +44,25 @@ using namespace datadriven;
 using namespace::gen::org_allseenalliance_test;
 
 class TestObject :
-    public ProvidedObject, public SimpleTestObjectInterface {
+    public ProvidedObject, public SimpleTestObjectInterface, public ExtensionInterface {
   public:
     TestObject(shared_ptr<datadriven::ObjectAdvertiser> advertiser,
-               const qcc::String& name) :
-        ProvidedObject(advertiser), SimpleTestObjectInterface(this)
+               const qcc::String& name,
+               const qcc::String& othername = "hello world") :
+        ProvidedObject(advertiser), SimpleTestObjectInterface(this), ExtensionInterface(this)
     {
         this->name = name;
+        this->othername = othername;
     }
 
-    void Execute(ExecuteReply& reply)
+    void Execute(std::shared_ptr<ExecuteReply> reply)
     {
-        reply.Send(true);
+        reply->Send(true);
     }
 
-    void ExecuteWithArg(const qcc::String& in, ExecuteWithArgReply& reply)
+    void ExecuteWithArg(const qcc::String& in, std::shared_ptr<ExecuteWithArgReply> reply)
     {
-        reply.Send(true);
+        reply->Send(true);
     }
 
     void SetName(const qcc::String& name)
@@ -94,7 +98,8 @@ class TestObjectListener :
     virtual void OnUpdate(const std::shared_ptr<SimpleTestObjectProxy>& p)
     {
         SimpleTestObjectProxy::Properties prop = p->GetProperties();
-        QCC_DbgPrintf(("%p RECEIVED OBJ: %s", this, prop.name.c_str()));
+        QCC_DbgPrintf(("%p RECEIVED OBJ: %s (path = %s)", this, prop.name.c_str(),
+                       p->GetObjectId().GetBusObjectPath().c_str()));
         bool releaseSem = false;
         mutex.Lock();
         std::map<qcc::String, unsigned int>::iterator found = countObjects.find(prop.name);
@@ -122,7 +127,8 @@ class TestObjectListener :
         mutex.Lock();
         removedObjectNames.push_back(prop.name);
         mutex.Unlock();
-        QCC_DbgPrintf(("%p REMOVED OBJ: %s", this, prop.name.c_str()));
+        QCC_DbgPrintf(("%p REMOVED OBJ: %s (path = %s)", this, prop.name.c_str(),
+                       p->GetObjectId().GetBusObjectPath().c_str()));
         semaphore.Post();
     }
 
@@ -169,7 +175,7 @@ class TestObjectListener :
     {
         while (true) {
             mutex.Lock();
-            QCC_DbgPrintf(("Received %d sem releases", objectNames.size()));
+            QCC_DbgPrintf(("%p Received %d sem releases", this, objectNames.size()));
             if (objectNames.size() == numberOfObjects) {
                 mutex.Unlock();
                 break;

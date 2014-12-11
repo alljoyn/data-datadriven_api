@@ -177,13 +177,17 @@ class PropertiesTests :
   protected:
     void AddObject()
     {
-        ObserverManager::GetInstance(observer->GetBusConnection())->GetCache(IFACE_NAME)->AddObject(*id);
+        std::shared_ptr<BusConnectionImpl> bc = observer->GetBusConnection();
+        std::shared_ptr<ProxyInterface> intf = ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->AddObject(*id);
+        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(intf, true);
         _sync.Wait();
     }
 
     void RemoveObject()
     {
-        ObserverManager::GetInstance(observer->GetBusConnection())->GetCache(IFACE_NAME)->RemoveObject(*id);
+        std::shared_ptr<BusConnectionImpl> bc = observer->GetBusConnection();
+        std::shared_ptr<ProxyInterface> intf = ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->RemoveObject(*id);
+        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(intf, false);
         _sync.Wait();
     }
 

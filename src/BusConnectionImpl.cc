@@ -30,7 +30,7 @@ using namespace ajn::services;
 
 shared_ptr<BusConnectionImpl> BusConnectionImpl::GetInstance(BusAttachment* ba)
 {
-    static qcc::Mutex mutex;
+    static datadriven::Mutex mutex;
     static weak_ptr<BusConnectionImpl> instance;
     shared_ptr<BusConnectionImpl> sharedInstance = nullptr;
 

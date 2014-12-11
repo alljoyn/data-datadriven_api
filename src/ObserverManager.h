@@ -24,7 +24,7 @@
 #include <alljoyn/services_common/AsyncTaskQueue.h>
 
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
+#include <datadriven/Mutex.h>
 
 #include "ObserverCache.h"
 #include "SessionManager.h"
@@ -112,7 +112,7 @@ class ObserverManager :
     /**
      * Mutex that protects access to the discovered objects map
      */
-    qcc::Mutex objectsMutex;
+    datadriven::Mutex objectsMutex;
 
     /**
      * The observer cache per interface name keeping track of all proxy interface instances
@@ -124,7 +124,7 @@ class ObserverManager :
     /**
      * Mutex that protects access to the observer cache map
      */
-    qcc::Mutex cachesMutex;
+    datadriven::Mutex cachesMutex;
 
     /**
      * Reference to busConnection
@@ -160,10 +160,10 @@ class ObserverManager :
     /**
      * Add a new object (this method will enqueue a new async task object)
      *
-     * \param ifName the interface name
+     * \param ifName the interfaces of the object
      * \param objId the object id
      */
-    void AddObject(const qcc::String ifName,
+    void AddObject(const std::vector<qcc::String>& ifName,
                    const ObjectId& objId);
 
     /**
@@ -172,7 +172,7 @@ class ObserverManager :
      * \param ifName the interface name
      * \param objId the object id
      */
-    void RemoveObject(const qcc::String ifName,
+    void RemoveObject(const std::vector<qcc::String>& ifName,
                       const ObjectId& objId);
 
     /**
@@ -217,6 +217,8 @@ class ObserverManager :
     virtual void OnEmptyQueue();
 
     virtual void OnTask(ajn::services::TaskData const* taskdata);
+
+    std::vector<std::weak_ptr<ObserverCache> > GetObserverCaches(const std::vector<qcc::String>& ifNames) const;
 };
 }
 

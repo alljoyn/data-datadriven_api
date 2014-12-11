@@ -38,24 +38,41 @@ class Methods :
     public datadriven::ProvidedObject,
     public MethodsInterface {
   public:
+    std::shared_ptr<ReplyAsyncReply> replyAsync;
+    uint32_t timeout;
+
     Methods(shared_ptr<datadriven::ObjectAdvertiser> advertiser) :
         datadriven::ProvidedObject(advertiser),
-        MethodsInterface(this)
+        MethodsInterface(this), replyAsync(nullptr)
     {
     }
 
   protected:
-    void Sleep(uint32_t timeout, SleepReply& _reply)
+    void Sleep(uint32_t timeout, std::shared_ptr<SleepReply> _reply)
     {
         cout << "Provider sleeping" << endl;
         sleep(timeout / 1000);
-        _reply.Send();
+        _reply->Send();
     }
 
     void ReplyViaSignal(int32_t i)
     {
         cout << "Provider sending signal" << endl;
         assert(ER_OK == SignalForReply(i));
+    }
+
+    void MethodWithCallback(std::shared_ptr<MethodWithCallbackReply> _reply)
+    {
+        cout << "Provider sending methodreply" << endl;
+        _reply->Send();
+    }
+
+    // This method does not return a reply
+    void ReplyAsync(uint32_t timeout, std::shared_ptr<ReplyAsyncReply> _reply)
+    {
+        cout << "Provider sending Reply asynchronously" << endl;
+        this->timeout = timeout;
+        replyAsync = _reply;
     }
 };
 
@@ -72,7 +89,13 @@ static void be_provider(void)
     assert(ER_OK == m.Methods::GetStatus());
     cout << "Provider sleeping" << endl;
     while (true) {
-        sleep(60);
+        sleep(1);
+        if (m.replyAsync) {
+            sleep(m.timeout / 1000);
+            m.replyAsync->Send();
+            m.replyAsync = nullptr;
+            m.timeout = 0;
+        }
     }
 }
 
@@ -107,7 +130,8 @@ class MethodsSignalListener :
  */
 static void test_method_timeout(const MethodsProxy& mp)
 {
-    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv = mp.Sleep(TIMEOUT * 2, TIMEOUT);
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv = mp.Sleep(TIMEOUT * 2,
+                                                                                            TIMEOUT);
     cout << "Consumer waiting for reply" << endl;
 #ifndef NDEBUG
     const MethodsProxy::SleepReply& reply = inv->GetReply();
@@ -126,6 +150,119 @@ static void test_method_noreply(const MethodsProxy& mp)
 {
     assert(ER_OK == mp.ReplyViaSignal(NUMBER));
     cout << "Consumer waiting for signal" << endl;
+    _sync.Wait();
+}
+
+class MyMethodReplyListener :
+    public datadriven::MethodReplyListener<MethodsProxy::MethodWithCallbackReply> {
+    void OnReply(const MethodsProxy::MethodWithCallbackReply& reply)
+    {
+        cout << "Consumer method reply callback ready" << endl;
+        assert(ER_OK == reply.GetStatus());
+        _sync.Post();
+    }
+};
+
+/**
+ * \test Method reply Async callback mechanism
+ *       -# call MethodwithCallback method
+ *       -# Wait for reply in callback
+ */
+static void test_method_reply_callback(const MethodsProxy& mp)
+{
+    MyMethodReplyListener listener = MyMethodReplyListener();
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::MethodWithCallbackReply> > inv = mp.MethodWithCallback(
+        TIMEOUT);
+    inv->SetListener(listener);
+
+    cout << "Consumer waiting for method with callback" << endl;
+    _sync.Wait();
+}
+
+class MyTimeoutMethodReplyListener :
+    public datadriven::MethodReplyListener<MethodsProxy::SleepReply> {
+    void OnReply(const MethodsProxy::SleepReply& reply)
+    {
+        cout << "Consumer method timeout reply callback ready" << endl;
+        assert(ER_TIMEOUT == reply.GetStatus());
+        _sync.Post();
+    }
+};
+
+/**
+ * \test Method reply Async timeout callback mechanism
+ *       -# call Sleep method
+ *       -# force that the callback is set only after the timeout has happened
+ *       -# Wait for timeout reply in callback
+ */
+static void test_method_reply_callback_timeout(const MethodsProxy& mp)
+{
+    MyTimeoutMethodReplyListener listener = MyTimeoutMethodReplyListener();
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv =
+        mp.Sleep(TIMEOUT * 2, 1);
+
+    /* Wait with adding the listener till after the timeout has occurred */
+    sleep(3);
+    inv->SetListener(listener);
+
+    cout << "Consumer waiting for method with callback timeout" << endl;
+    _sync.Wait();
+}
+
+class MyCancelMethodReplyListener :
+    public datadriven::MethodReplyListener<MethodsProxy::SleepReply> {
+    void OnReply(const MethodsProxy::SleepReply& reply)
+    {
+        cout << "We must never get here!" << endl;
+        /* Always fail */
+        assert(0);
+    }
+};
+
+/**
+ * \test Method reply Async callback mechanism
+ *       -# call Sleep method
+ *       -# Add a method reply listener
+ *       -# Cancel the method
+ */
+static void test_method_reply_callback_cancel(const MethodsProxy& mp)
+{
+    MyCancelMethodReplyListener listener = MyCancelMethodReplyListener();
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv =
+        mp.Sleep(TIMEOUT, TIMEOUT);
+    inv->SetListener(listener);
+    inv->Cancel();
+
+    cout << "Consumer test the cancel method on the MethodInvocation" << endl;
+
+    sleep(TIMEOUT / 500);
+}
+
+class MyReplyAsyncMethodReplyListener :
+    public datadriven::MethodReplyListener<MethodsProxy::ReplyAsyncReply> {
+    void OnReply(const MethodsProxy::ReplyAsyncReply& reply)
+    {
+        cout << "Received async reply from provider" << endl;
+        assert(ER_OK == reply.GetStatus());
+        _sync.Post();
+    }
+};
+
+/**
+ * \test Method reply Async callback mechanism
+ *       -# Call ReplyAsync method
+ *       -# Add a method reply listener
+ *       -# Wait for reply
+ */
+static void test_method_reply_async(const MethodsProxy& mp)
+{
+    MyReplyAsyncMethodReplyListener listener = MyReplyAsyncMethodReplyListener();
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::ReplyAsyncReply> > inv =
+        mp.ReplyAsync(TIMEOUT);
+    inv->SetListener(listener);
+
+    cout << "Consumer test the provider side" << endl;
+
     _sync.Wait();
 }
 
@@ -148,6 +285,10 @@ static void be_consumer(void)
         cout << "Consumer in iterator for " << it->GetObjectId() << endl;
         test_method_timeout(**it);
         test_method_noreply(**it);
+        test_method_reply_callback(**it);
+        test_method_reply_callback_timeout(**it);
+        test_method_reply_async(**it);
+        test_method_reply_callback_cancel(**it);
     }
     cout << "Consumer done" << endl;
 }

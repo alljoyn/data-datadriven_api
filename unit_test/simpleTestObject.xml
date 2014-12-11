@@ -31,4 +31,9 @@
       <arg name="test" type="s"/>
     </signal>
   </interface>
+  <interface name="org.allseenalliance.test.Extension">
+    <property name="othername" type="s" access="read">
+        <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+  </interface>
 </node>

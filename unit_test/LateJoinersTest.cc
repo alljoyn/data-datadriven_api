@@ -36,7 +36,9 @@ static void Publish(shared_ptr<datadriven::ObjectAdvertiser> advertiser,
 {
     qcc::String testObjName;
     for (int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObjectLateJoiner" + to_string(i)).c_str();
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObjectLateJoiner%d", i);
+        testObjName = qcc::String(buffer);
         testObjects.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
         ASSERT_TRUE(testObjects.back()->UpdateAll() == ER_OK);
     }
@@ -56,7 +58,9 @@ static void WaitOnUpdates(TestObjectListener& testObjectListener,
     testObjectListener.WaitOnAllUpdates(numPubObjs, 5);
     EXPECT_TRUE((int)testObjectListener.nameToObjects.size() == numPubObjs);
     for (int i = 0; i < numPubObjs; i++) {
-        testObjName = ("TestObjectLateJoiner" + to_string(i)).c_str();
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "TestObjectLateJoiner%d", i);
+        testObjName = qcc::String(buffer);
         std::map<qcc::String, std::shared_ptr<SimpleTestObjectProxy> >::iterator itr =
             testObjectListener.nameToObjects.find(testObjName);
         EXPECT_TRUE(itr != testObjectListener.nameToObjects.end());

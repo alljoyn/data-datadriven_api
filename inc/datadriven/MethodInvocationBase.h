@@ -30,6 +30,8 @@
 #include <datadriven/Semaphore.h>
 
 namespace datadriven {
+class MethodReplyListenerBase;
+
 /**
  * \class MethodInvocationBase
  * \brief Base class for an invocation of a method on an AllJoyn interface.
@@ -119,6 +121,12 @@ class MethodInvocationBase :
                      ajn::MsgArg& propValue,
                      uint32_t timeout = DefaultCallTimeout);
 
+    /**
+     * \private
+     * Call the OnReplyMessage function on the MethodReplyListener
+     */
+    virtual void HandleReply() = 0;
+
   protected:
     /** \private
      * Shared pointer to ensure we stay alive until response arrives
@@ -127,11 +135,27 @@ class MethodInvocationBase :
     mutable std::shared_ptr<MethodInvocationBase> shared_this;
 
     /** \private
+     * state of the method reply, can be either WAITING or READY
+     */
+    MethodInvocationBase::InvState state;
+
+    /** \private
      * Sets shared_this.
      *
      * \param[in] inv the new shared pointer to set to shared_this
      */
     void SetRefCountedPtr(std::shared_ptr<MethodInvocationBase> inv);
+
+    /** \private
+     * Unsets shared_this. This is the result of a cancel operation.
+     */
+    void UnsetRefCountedPtr();
+
+    /**
+     * \private
+     * Schedule the MethodReplyListener on the correct thread
+     */
+    void ScheduleMethodReplyListener();
 
     /**
      * Returns the method reply linked to this method invocation.
@@ -141,7 +165,6 @@ class MethodInvocationBase :
     virtual ConsumerMethodReply& GetConsumerMethodReply() = 0;
 
   private:
-    MethodInvocationBase::InvState state;
     Semaphore* sem;
 
     // prevent copy by construction or assignment (can not copy semaphore)
