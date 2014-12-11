@@ -141,6 +141,7 @@ class AJNPropertiesConsumer :
 
         /* Add interface and register the properties changed handler */
         assert(ER_OK == pbo->AddInterface(*iface));
+        bus.EnableConcurrentCallbacks();
         assert(ER_OK == pbo->RegisterPropertiesChangedListener(IFACE, NULL, 0, *this, NULL));
 
         updated++;
