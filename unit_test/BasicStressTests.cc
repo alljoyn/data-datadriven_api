@@ -228,7 +228,6 @@ TEST(BasicStressTests, MethodCallInvalidArgument) {
             it.second->ExecuteWithArg(tmp));
         SimpleTestObjectProxy::ExecuteWithArgReply reply2 = invocation2->GetReply();
         EXPECT_EQ(ER_BUS_BAD_BODY_LEN, reply2.GetStatus());
-        EXPECT_FALSE(reply2.success);
     }
 }
 
