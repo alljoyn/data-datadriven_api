@@ -46,14 +46,14 @@ void MethodInvocationBase::ScheduleMethodReplyListener()
 {
     std::shared_ptr<ObserverManager> mgr = ObserverManager::GetInstance();
     if (mgr) {
-        MethodTask* task = new MethodTask(shared_this);
+        MethodTask* task = new MethodTask(weak_this);
         mgr->Enqueue(task);
     }
 }
 
 MethodInvocationBase::MethodInvocationBase() :
-    shared_this(nullptr),
     state(WAITING),
+    shared_this(nullptr),
     sem(new Semaphore())
 {
 }
@@ -76,11 +76,7 @@ MethodInvocationBase::MethodInvocationBase(MethodInvocationBase && inv) :
 void MethodInvocationBase::SetRefCountedPtr(std::shared_ptr<MethodInvocationBase> inv)
 {
     shared_this = inv;
-}
-
-void MethodInvocationBase::UnsetRefCountedPtr()
-{
-    shared_this = nullptr;
+    weak_this = inv;
 }
 
 MethodInvocationBase::InvState MethodInvocationBase::GetState() const
@@ -103,6 +99,14 @@ void MethodInvocationBase::SetReplyStatus(const QStatus status)
 {
     GetConsumerMethodReply().SetStatus(status);
     state = READY;
+    shared_this = nullptr;
+}
+
+void MethodInvocationBase::Cancel()
+{
+    GetConsumerMethodReply().SetStatus(ER_FAIL);
+    state = CANCELLED;
+    weak_this.reset();
 }
 
 void MethodInvocationBase::Exec(const ProxyInterface& intf,
@@ -199,6 +203,8 @@ void MethodInvocationBase::OnReplyMessage(ajn::Message& message, void* context)
         if (nullptr != sem) {
             sem->Post();
         }
+    } else {
+        SetReplyStatus(ER_FAIL); // no-one listening anymore
     }
 }
 
@@ -247,7 +253,6 @@ void MethodInvocationBase::OnGetProperty(QStatus status,
     if (nullptr != sem) {
         sem->Post();
     }
-    UnsetRefCountedPtr();
 }
 
 /** \private
@@ -289,6 +294,5 @@ void MethodInvocationBase::OnSetProperty(QStatus status,
     if (nullptr != sem) {
         sem->Post();
     }
-    UnsetRefCountedPtr();
 }
 }

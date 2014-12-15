@@ -202,7 +202,7 @@ static void test_method_reply_callback_timeout(const MethodsProxy& mp)
         mp.Sleep(TIMEOUT * 2, 1);
 
     /* Wait with adding the listener till after the timeout has occurred */
-    sleep(3);
+    sleep(3 * TIMEOUT / 1000);
     inv->SetListener(listener);
 
     cout << "Consumer waiting for method with callback timeout" << endl;
@@ -227,15 +227,13 @@ class MyCancelMethodReplyListener :
  */
 static void test_method_reply_callback_cancel(const MethodsProxy& mp)
 {
+    cout << "Consumer test the cancel method on the MethodInvocation" << endl;
     MyCancelMethodReplyListener listener = MyCancelMethodReplyListener();
     std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv =
         mp.Sleep(TIMEOUT, TIMEOUT);
     inv->SetListener(listener);
     inv->Cancel();
-
-    cout << "Consumer test the cancel method on the MethodInvocation" << endl;
-
-    sleep(TIMEOUT / 500);
+    sleep(2 * TIMEOUT / 1000); // wait for response to arrive, no callback expected
 }
 
 class MyReplyAsyncMethodReplyListener :
@@ -266,6 +264,27 @@ static void test_method_reply_async(const MethodsProxy& mp)
     _sync.Wait();
 }
 
+/**
+ * \test Method cancel mechanism
+ *       -# call Sleep method
+ *       -# Add a method reply listener
+ *       -# Cancel the method
+ *       -# Release all memory associated with invocation
+ *       -# Ensure listener not called and no crash
+ */
+static void test_method_reply_response_after_cancel(const MethodsProxy& mp)
+{
+    cout << "Consumer test the cancel method on the MethodInvocation response" << endl;
+    MyCancelMethodReplyListener listener = MyCancelMethodReplyListener();
+    std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv =
+        mp.Sleep(TIMEOUT, TIMEOUT);
+    inv->SetListener(listener);
+    inv->Cancel();
+    assert(inv->CANCELLED == inv->GetState());
+    inv.reset();
+    sleep(2 * TIMEOUT / 1000); // wait for response to arrive, no callback expected
+}
+
 static void be_consumer(void)
 {
     MethodsListener ml = MethodsListener();
@@ -289,6 +308,7 @@ static void be_consumer(void)
         test_method_reply_callback_timeout(**it);
         test_method_reply_async(**it);
         test_method_reply_callback_cancel(**it);
+        test_method_reply_response_after_cancel(**it);
     }
     cout << "Consumer done" << endl;
 }

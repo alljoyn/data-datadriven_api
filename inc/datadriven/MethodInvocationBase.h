@@ -51,7 +51,8 @@ class MethodInvocationBase :
      */
     enum InvState {
         WAITING, /**< Waiting for remote side to respond */
-        READY /**< Method reply (or error message) received and processed */
+        READY, /**< Method reply (or error message) received and processed */
+        CANCELLED /**< Invocation was cancelled by the user */
     };
 
     /** \private Initializes the Future object. */
@@ -78,6 +79,14 @@ class MethodInvocationBase :
      * \param[in] status Method reply error code.
      */
     void SetReplyStatus(const QStatus status);
+
+    /**
+     *  \brief Tell the framework you do not care about the reply of this method call.
+     *
+     * This is only a local reinforcement, it explicitly tells the framework
+     * you are no longer interested in the reply of the method call.
+     */
+    void Cancel();
 
     /**
      * Block calling thread until a reply has arrived.  This could also be a
@@ -129,12 +138,6 @@ class MethodInvocationBase :
 
   protected:
     /** \private
-     * Shared pointer to ensure we stay alive until response arrives
-     * even if caller does not keep reference
-     */
-    mutable std::shared_ptr<MethodInvocationBase> shared_this;
-
-    /** \private
      * state of the method reply, can be either WAITING or READY
      */
     MethodInvocationBase::InvState state;
@@ -145,11 +148,6 @@ class MethodInvocationBase :
      * \param[in] inv the new shared pointer to set to shared_this
      */
     void SetRefCountedPtr(std::shared_ptr<MethodInvocationBase> inv);
-
-    /** \private
-     * Unsets shared_this. This is the result of a cancel operation.
-     */
-    void UnsetRefCountedPtr();
 
     /**
      * \private
@@ -165,6 +163,19 @@ class MethodInvocationBase :
     virtual ConsumerMethodReply& GetConsumerMethodReply() = 0;
 
   private:
+    /**
+     * Shared pointer to ensure that the invocation object stays alive until
+     * the response from the Core framework arrives even if the caller does
+     * not keep a reference.
+     */
+    mutable std::shared_ptr<MethodInvocationBase> shared_this;
+
+    /**
+     * Weak pointer to be able to check whether the caller still has a
+     * reference to the invocation in the case where a listener is used.
+     */
+    mutable std::weak_ptr<MethodInvocationBase> weak_this;
+
     Semaphore* sem;
 
     // prevent copy by construction or assignment (can not copy semaphore)

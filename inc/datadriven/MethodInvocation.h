@@ -116,7 +116,7 @@ template <typename T> class MethodInvocation :
     void Cancel()
     {
         methodReplyListenerMutex.Lock();
-        UnsetRefCountedPtr();
+        MethodInvocationBase::Cancel();
         methodReplyListenerMutex.Unlock();
     }
 
@@ -146,7 +146,6 @@ template <typename T> class MethodInvocation :
         methodReplyListenerMutex.Lock();
         if (methodReplyListener) {
             methodReplyListener->OnReply(reply);
-            UnsetRefCountedPtr();
         }
         methodReplyListenerMutex.Unlock();
     }
@@ -157,7 +156,8 @@ template <typename T> class MethodInvocation :
     datadriven::Mutex methodReplyListenerMutex;
 
     /** Initializes the Future object. */
-    MethodInvocation()
+    MethodInvocation() :
+        methodReplyListener(nullptr)
     { }
 
     // prevent copy by assignment (can not copy semaphore)
