@@ -91,7 +91,7 @@ class AJNPropertiesConsumer :
                                    void* context)
     {
         updated++;
-        cout << "AJN consumer got changed property " << endl;
+        cout << "AJN consumer got changed property for " << obj.GetPath() << endl;
         assert(ER_OK == sync.Post());
     }
 
@@ -110,7 +110,6 @@ class AJNPropertiesConsumer :
     {
         // ensure at least one object
         assert(objectDescs.size() > 0);
-        remoteBusName = busName;
         // get path of object matching our interface
         for (AboutClient::ObjectDescriptions::const_iterator object = objectDescs.begin();
              (0 == objectPath.length()) && (object != objectDescs.end());
@@ -124,8 +123,11 @@ class AJNPropertiesConsumer :
             }
         }
         // join session with peer
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
-        assert(ER_OK == bus.JoinSessionAsync(busName, port, NULL, opts, this, NULL));
+        if (remoteBusName != busName) {
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
+            assert(ER_OK == bus.JoinSessionAsync(busName, port, NULL, opts, this, NULL));
+            remoteBusName = busName;
+        }
     }
 
     void JoinSessionCB(QStatus status,
@@ -137,7 +139,7 @@ class AJNPropertiesConsumer :
         pbo = new ProxyBusObject(bus, remoteBusName.c_str(), objectPath.c_str(), id);
         assert(NULL != pbo);
 
-        cout << "Consumer add interface" << endl;
+        cout << "Consumer add interface for session " << id << endl;
 
         /* Add interface and register the properties changed handler */
         assert(ER_OK == pbo->AddInterface(*iface));
