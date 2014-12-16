@@ -36,8 +36,12 @@ AllTypes::AllTypes(shared_ptr<datadriven::ObjectAdvertiser> advertiser,
     b(false)
 {
     nelem = nbelem;
-    long long cnt = 0;
 
+    // initialize unnamed properties
+    prop_unnamed_struct.member0 = false;
+
+    // initial standard properties
+    long long cnt = 0;
     init_data(prop_boolean, nelem, cnt);
     init_data(prop_byte, nelem, cnt);
     init_data(prop_int16, nelem, cnt);
