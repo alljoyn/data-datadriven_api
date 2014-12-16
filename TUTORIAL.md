@@ -37,8 +37,8 @@ An AllJoyn Interface consists of the following parts:
 
 * a name. Interface names follow a Java-like namespacing pattern, and should
   start with a reversed domain name. For example,
-  `org.allseenalliance.sample.Foo` refers to an interface `Foo` in namespace
-  `org.allseenalliance.sample`.
+  `org.allseen.Samples.Foo` refers to an interface `Foo` in namespace
+  `org.allseen.Samples`.
 * a set of *Properties*. Properties are like member fields in an
   object-oriented programming language: they represent the observable state of
   the object implementing the interface. A Property has a name and a type.
@@ -255,11 +255,11 @@ The resulting data model looks like this:
 
 ~~~ {.xml}
 <node>
-  <interface name="org.allseenalliance.sample.Door">
-    <property name="open" type="b" access="read">
+  <interface name="org.allseen.Samples.Door">
+    <property name="IsOopen" type="b" access="read">
         <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
-    <property name="location" type="s" access="read">
+    <property name="Location" type="s" access="read">
         <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
 
@@ -268,7 +268,7 @@ The resulting data model looks like this:
     <method name="Close">
     </method>
     <signal name="PersonPassedThrough">
-      <arg name="who" type="s"/>
+      <arg name="Name" type="s"/>
     </signal>
   </interface>
 </node>
@@ -304,14 +304,14 @@ The first thing we need to do, is  define a class for the Objects that will
 represent our physical doors on the AllJoyn Bus. This class must derive from
 `datadriven::ProvidedObject` and from any generated interface class we want the
 Object to implement. In this case,that means only
-`gen::org_allseenalliance_sample::Door`.
+`gen::org_allseen_Samples::Door`.
 
 ~~~ {.cpp}
 #include <datadriven/datadriven.h>
 #include "DoorInterface.h"
 
 using namespace std;
-using namespace::gen::org_allseenalliance_sample;
+using namespace gen::org_allseen_Samples;
 class Door : public datadriven::ProvidedObject, public DoorInterface {
   public:
     Door(shared_ptr<datadriven::ObjectAdvertiser> advertiser, qcc::String _location, bool _open = false) :
@@ -340,13 +340,13 @@ way the method call does not necessarily block.
 ~~~ {.cpp}
 void Door::Open(shared_ptr<OpenReply> reply)
 {
-    if (this->open) {
+    if (IsOpen) {
         /* door already open, so return an error */
         reply->SendErrorCode(ER_FAIL);
     } else {
         /* OK, we can open it. */
-        this->open = true; /* update the observable properties */
-        this->DoorInterface::Update(); /* let the world know we are in a new consistent state */
+        IsOpen = true; /* update the observable properties */
+        DoorInterface::Update(); /* let the world know we are in a new consistent state */
         reply->Send(); /* notify caller of completion (no output arguments) */
     }
 }
@@ -426,7 +426,7 @@ that the returned observer shared pointer is valid.
 #include "DoorProxy.h"
 
 using namespace std;
-using namespace::gen::org_allseenalliance_sample;
+using namespace gen::org_allseen_Samples;
 
 int main()
 {
@@ -459,7 +459,8 @@ cycle of that proxy object.
 
 ##### Access properties
 
-When you have a `shared_ptr<DoorProxy>`, you can always access the last known Properties for that door Object by calling `GetProperties()`.
+When you have a `shared_ptr<DoorProxy>`, you can always access the last known
+Properties for that door Object by calling `GetProperties()`.
 
 ~~~ {.cpp}
     const DoorProxy::Properties prop = door->GetProperties();
@@ -533,9 +534,10 @@ void list_doors(shared_ptr<datadriven::Observer<DoorProxy> > observer)
 
     for (; it != observer->end(); ++it) {
         // *it is of type shared_ptr<DoorProxy>
-        // it-> dereferences twice, so the following line calls GetProperties on DoorProxy, not on the iterator.
+        // it-> dereferences twice, so the following line calls GetProperties
+        // on DoorProxy, not on the iterator.
         DoorProxy::Properties prop = it->GetProperties();
-        cout << "Door location: " << prop.location.c_str() << " open: " << prop.open << endl;
+        cout << "Door location: " << prop.Location.c_str() << " open: " << prop.IsOpen << endl;
     }
 }
 ~~~
@@ -552,7 +554,7 @@ void show_door(shared_ptr<datadriven::Observer<DoorProxy> > observer,
     shared_ptr<DoorProxy> door = observer->GetObject(object_id);
     if (door) { // check for pointer validity
         DoorProxy::Properties prop = door->GetProperties();
-        cout << "Door location: " << prop.location.c_str() << " open: " << prop.open << endl;
+        cout << "Door location: " << prop.Location.c_str() << " open: " << prop.IsOpen << endl;
     } else {
         cerr << "ID " << object_id << " does not identify a live object on the bus." << endl;
     }
@@ -595,14 +597,14 @@ class MyDoorListener : public datadriven::Observer<DoorProxy>::Listener {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
         cout << "Update for door " << id << ": location = "
-             << prop.location.c_str() << " open = " << prop.open << "." << endl;
+             << prop.Location.c_str() << " open = " << prop.IsOpen << "." << endl;
     }
 
     void OnRemove(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
-        cout << "Door " << id << "at location " << prop.location.c_str()
+        cout << "Door " << id << "at location " << prop.Location.c_str()
              << " has disappeared." << endl;
     }
 };
@@ -639,11 +641,11 @@ class PPTListener : public datadriven::SignalListener<DoorProxy, DoorProxy::Pers
   public:
     void onSignal(const DoorProxy::PersonPassedThrough& signal)
     {
-        const qcc::String who = signal.who; // signal argument
+        const qcc::String name = signal.Name; // signal argument
         const shared_ptr<DoorProxy> door = signal.GetEmitter();
         const DoorProxy::Properties prop = door->GetProperties();
 
-        cout << who.c_str() << " passed through a door at location " << prop.location.c_str() << endl;
+        cout << name.c_str() << " passed through a door at location " << prop.Location.c_str() << endl;
     }
 };
 

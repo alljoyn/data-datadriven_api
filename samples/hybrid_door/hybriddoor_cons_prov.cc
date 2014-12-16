@@ -37,14 +37,14 @@
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
 using namespace std;
-using namespace::gen::org_allseenalliance_sample;
+using namespace gen::com_example;
 using namespace ajn;
 using namespace services;
 using namespace qcc;
 
 static SessionId s_sessionId = 0; /* both for provider and consumer */
 class Door;
-vector<std::unique_ptr<Door> > g_doors;
+vector<unique_ptr<Door> > g_doors;
 int g_turn = 0;
 
 static int run_test(datadriven::Observer<DoorProxy>& observer);
@@ -65,8 +65,8 @@ class Door :
         datadriven::ProvidedObject(advertiser, path),   /* If you don't pass a path, it will be constructed for you */
         DoorInterface(this), mutex(PTHREAD_MUTEX_INITIALIZER)
     {
-        this->open = open;
-        this->location = location;
+        IsOpen = open;
+        Location = location;
         code = 1234;
     }
 
@@ -76,43 +76,43 @@ class Door :
 
     const qcc::String& GetLocation() const
     {
-        return location;
+        return Location;
     }
 
     /* Implement pure virtual function */
-    void Open(std::shared_ptr<OpenReply> reply)
+    void Open(shared_ptr<OpenReply> reply)
     {
         pthread_mutex_lock(&mutex);
-        cout << "Door @ " << location.c_str() << " was requested to open." << endl;
-        if (this->open) {
+        cout << "Door @ " << Location.c_str() << " was requested to open." << endl;
+        if (IsOpen) {
             cout << "\t... but it was already open." << endl;
             reply->SendErrorCode(ER_FAIL);
         } else {
             cout << "\t... and it was closed, so we can comply." << endl;
-            this->open = true;
-            this->DoorInterface::Update();
+            IsOpen = true;
+            DoorInterface::Update();
             reply->Send();
         }
-        cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
+        cout << "[next up is " << g_doors[g_turn]->Location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
         cout.flush();
     }
 
     /* Implement pure virtual function */
-    void Close(std::shared_ptr<CloseReply> reply)
+    void Close(shared_ptr<CloseReply> reply)
     {
         pthread_mutex_lock(&mutex);
-        cout << "Door @ " << location.c_str() << " was requested to close." << endl;
-        if (this->open) {
+        cout << "Door @ " << Location.c_str() << " was requested to close." << endl;
+        if (IsOpen) {
             cout << "\t... and it was open, so we can comply." << endl;
-            this->open = false;
-            this->DoorInterface::Update();
+            IsOpen = false;
+            DoorInterface::Update();
             reply->Send();
         } else {
             cout << "\t... but it was already closed." << endl;
             reply->SendError("org.allseenalliance.sample.Door.CloseError", "Could not close the door, already closed");
         }
-        cout << "[next up is " << g_doors[g_turn]->location.c_str() << "] >";
+        cout << "[next up is " << g_doors[g_turn]->Location.c_str() << "] >";
         pthread_mutex_unlock(&mutex);
         cout.flush();
     }
@@ -121,14 +121,14 @@ class Door :
     void KnockAndRun()
     {
         pthread_mutex_lock(&mutex);
-        cout << "Door @ " << location.c_str() << " has being knocked upon." << endl;
-        if (!this->open) {
+        cout << "Door @ " << Location.c_str() << " has being knocked upon." << endl;
+        if (!IsOpen) {
             // see who's there
-            this->open = true;
-            this->DoorInterface::Update();
+            IsOpen = true;
+            DoorInterface::Update();
             cout << "\t... GRRRR... damn children" << endl;
-            this->open = false;
-            this->DoorInterface::Update();
+            IsOpen = false;
+            DoorInterface::Update();
         }
         pthread_mutex_unlock(&mutex);
     }
@@ -136,10 +136,10 @@ class Door :
     void FlipOpen()
     {
         pthread_mutex_lock(&mutex);
-        const char* action = open ? "Closing" : "Opening";
-        cout << action << " door @ " << location.c_str() << "." << endl;
-        open = !open;
-        this->DoorInterface::Update();
+        const char* action = IsOpen ? "Closing" : "Opening";
+        cout << action << " door @ " << Location.c_str() << "." << endl;
+        IsOpen = !IsOpen;
+        DoorInterface::Update();
         pthread_mutex_unlock(&mutex);
     }
 
@@ -147,7 +147,7 @@ class Door :
     void PersonPassThrough(const qcc::String& who)
     {
         pthread_mutex_lock(&mutex);
-        cout << who.c_str() << " will pass through door @ " << location.c_str() << "." << endl;
+        cout << who.c_str() << " will pass through door @ " << Location.c_str() << "." << endl;
         DoorInterface::PersonPassedThrough(who);
         pthread_mutex_unlock(&mutex);
     }
@@ -155,14 +155,14 @@ class Door :
     void ChangeCode()
     {
         pthread_mutex_lock(&mutex);
-        cout << "door @ " << location.c_str() << ": change code" << endl;
+        cout << "door @ " << Location.c_str() << ": change code" << endl;
         code = rand() % 10000; //code of max 4 digits
-        Invalidatecode();
+        InvalidateKeyCode();
         UpdateAll();
         pthread_mutex_unlock(&mutex);
     }
 
-    QStatus Getcode(uint32_t& _code) const
+    QStatus GetKeyCode(uint32_t& _code) const
     {
         _code = code;
         return ER_OK;
@@ -217,7 +217,7 @@ static void cleanup(bool busHalted = false)
         delete bus;
         bus = NULL;
     }
-    std::cout << "Goodbye!" << std::endl;
+    cout << "Goodbye!" << endl;
 }
 
 /******************************************************************/
@@ -367,34 +367,34 @@ static int StartAlljoynApplication()
     busListener = new CommonBusListener();
     status = CommonSampleUtil::prepareAboutService(bus, propertyStoreImpl, busListener, SERVICE_PORT);
     if (status != ER_OK) {
-        std::cout << "Could not set up the AboutService." << std::endl;
+        cout << "Could not set up the AboutService." << endl;
         cleanup();
         return 1;
     }
 
     status = CommonSampleUtil::aboutServiceAnnounce();
     if (status != ER_OK) {
-        std::cout << "Could not announce." << std::endl;
+        cout << "Could not announce." << endl;
         cleanup();
         return 1;
     }
 
     status = CreateInterface();
     if (status != ER_OK) {
-        std::cerr << "Failure" << __LINE__ << std::endl;
+        cerr << "Failure" << __LINE__ << endl;
     }
     status = RegisterBusObject(bso = new BasicSampleObject(*bus, SERVICE_PATH));
     if (status != ER_OK) {
-        std::cerr << "Failure" << __LINE__ << std::endl;
+        cerr << "Failure" << __LINE__ << endl;
     }
     const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
     status = RequestName();
     if (status != ER_OK) {
-        std::cerr << "Failure" << __LINE__ << std::endl;
+        cerr << "Failure" << __LINE__ << endl;
     }
     status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
     if (status != ER_OK) {
-        std::cerr << "Failure" << __LINE__ << std::endl;
+        cerr << "Failure" << __LINE__ << endl;
     }
 
     return 0;
@@ -468,7 +468,7 @@ static void list_doors(datadriven::Observer<DoorProxy>& observer)
         datadriven::ObjectId id = it->GetObjectId();
         DoorProxy::Properties prop = it->GetProperties();
 
-        cout << "Door " << id << " location: " << prop.location.c_str() << " open: " << prop.open << endl;
+        cout << "Door " << id << " location: " << prop.Location.c_str() << " open: " << prop.IsOpen << endl;
     }
 }
 
@@ -479,7 +479,7 @@ static shared_ptr<DoorProxy> get_door_at_location(datadriven::Observer<DoorProxy
     for (; it != observer.end(); ++it) {
         DoorProxy::Properties prop = it->GetProperties();
 
-        if (!strcmp(prop.location.c_str(), location.c_str())) {
+        if (!strcmp(prop.Location.c_str(), location.c_str())) {
             return *it;
         }
     }
@@ -492,7 +492,7 @@ static void open_door(datadriven::Observer<DoorProxy>& observer, const string& l
     shared_ptr<DoorProxy> door = get_door_at_location(observer, location);
 
     if (door) {
-        std::shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
+        shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = door->Open();
         DoorProxy::OpenReply reply = invocation->GetReply();
 
         if (ER_OK == reply.GetStatus()) {
@@ -519,7 +519,7 @@ static void close_door(datadriven::Observer<DoorProxy>& observer, const string& 
     shared_ptr<DoorProxy> door = get_door_at_location(observer, location);
 
     if (door) {
-        std::shared_ptr<datadriven::MethodInvocation<DoorProxy::CloseReply> > invocation = door->Close();
+        shared_ptr<datadriven::MethodInvocation<DoorProxy::CloseReply> > invocation = door->Close();
         DoorProxy::CloseReply reply = invocation->GetReply();
         if (ER_OK == reply.GetStatus()) {
             /* No error */
@@ -638,7 +638,7 @@ static QStatus ConsumerInit()
     SignalListeningObject* object = new SignalListeningObject(*bus, SERVICE_PATH2);
 
     if (bus->RegisterBusObject(*object) != ER_OK) {
-        std::cerr << "ERROR: Could not register object" << std::endl;
+        cerr << "ERROR: Could not register object" << endl;
         return ER_FAIL;
     }
 
@@ -655,26 +655,26 @@ static sem_t onremove;
 class MyDoorListener :
     public datadriven::Observer<DoorProxy>::Listener {
   public:
-    void OnUpdate(const std::shared_ptr<DoorProxy>& door)
+    void OnUpdate(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << "[listener] Update for door " << id << ": location = "
-             << prop.location.c_str() << ", open = " << prop.open << ", code = " << door->Getcode()->GetReply().code <<
-        "." << endl;
+             << prop.Location.c_str() << ", open = " << prop.IsOpen
+             << ", code = " << door->GetKeyCode()->GetReply().KeyCode << "." << endl;
         cout << "> ";
         cout.flush();
         sem_post(&onupdate);
     }
 
-    void OnRemove(const std::shared_ptr<DoorProxy>& door)
+    void OnRemove(const shared_ptr<DoorProxy>& door)
     {
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << "[listener] Door " << id << " at location "
-             << prop.location.c_str() << " does no longer exist." << endl;
+             << prop.Location.c_str() << " does no longer exist." << endl;
         cout << "> ";
         cout.flush();
         sem_post(&onremove);
@@ -688,15 +688,15 @@ class MyDoorSignalListener :
     public datadriven::SignalListener<DoorProxy, DoorProxy::PersonPassedThrough> {
     void OnSignal(const DoorProxy::PersonPassedThrough& signal)
     {
-        const std::shared_ptr<DoorProxy> door = signal.GetEmitter(); //Retrieve the door
+        const shared_ptr<DoorProxy> door = signal.GetEmitter(); //Retrieve the door
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
-        cout << "[listener] " << signal.who.c_str() << " passed through a door " << id
-             << ": location = " << prop.location.c_str() << endl;
+        cout << "[listener] " << signal.name.c_str() << " passed through a door " << id
+             << ": location = " << prop.Location.c_str() << endl;
         cout << "> ";
         cout.flush();
-        lastPerson = signal.who;
+        lastPerson = signal.name;
         sem_post(&onsignal);
     }
 };
@@ -704,19 +704,19 @@ class MyDoorSignalListener :
 static bool init_test()
 {
     if (sem_init(&onsignal, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << std::endl;
+        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
         return false;
     }
     if (sem_init(&onupdate, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << std::endl;
+        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
         return false;
     }
     if (sem_init(&onremove, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << std::endl;
+        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
         return false;
     }
     if (sem_init(&namechanged, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << std::endl;
+        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
         return false;
     }
 
@@ -734,8 +734,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     for (size_t i = 0; i < g_doors.size(); ++i) {
         ret = sem_timedwait(&onupdate, &twosec);
         if (ret != 0) {
-            cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << std::endl;
-            cerr << "FAIL: Did not see all doors " << std::endl;
+            cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
+            cerr << "FAIL: Did not see all doors " << endl;
             return EXIT_FAILURE;
         }
     }
@@ -744,13 +744,13 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     g_doors[0]->PersonPassedThrough("alice");
     ret = sem_timedwait(&onsignal, &twosec);
     if (ret != 0) {
-        cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << std::endl;
-        cerr << "FAIL: Did not see signal " << std::endl;
+        cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
+        cerr << "FAIL: Did not see signal " << endl;
         return EXIT_FAILURE;
     }
 
     if (lastPerson != "alice") {
-        cerr << "FAIL: Door signal failed " << std::endl;
+        cerr << "FAIL: Door signal failed " << endl;
         return EXIT_FAILURE;
     }
 
@@ -759,7 +759,7 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     for (; it != observer.end(); ++it) {
         datadriven::ObjectId id = it->GetObjectId();
         DoorProxy::Properties prop = it->GetProperties();
-        std::shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = it->Open();
+        shared_ptr<datadriven::MethodInvocation<DoorProxy::OpenReply> > invocation = it->Open();
         DoorProxy::OpenReply reply = invocation->GetReply();
         if (ER_OK != reply.GetStatus()) {
             cerr << "Invocation error occurred while trying to open a door " << endl;
@@ -768,7 +768,7 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     }
 
     for (size_t i = 0; i < g_doors.size(); ++i) {
-        if (g_doors[i]->open == false) {
+        if (g_doors[i]->IsOpen == false) {
             cerr << "Door was not open ! " << endl;
             return EXIT_FAILURE;
         }
@@ -782,8 +782,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     for (size_t i = 0; i < g_doors.size(); ++i) {
         ret = sem_timedwait(&onremove, &twosec);
         if (ret != 0) {
-            cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << std::endl;
-            cerr << "FAIL: Did not see all doors removed " << std::endl;
+            cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
+            cerr << "FAIL: Did not see all doors removed " << endl;
             return EXIT_FAILURE;
         }
     }
@@ -797,8 +797,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     bso->EmitNameChangedSignal("mynewname");
     ret = sem_timedwait(&namechanged, &twosec);
     if (ret != 0) {
-        cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << std::endl;
-        cerr << "FAIL: Did not see AJN signal " << std::endl;
+        cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
+        cerr << "FAIL: Did not see AJN signal " << endl;
         return EXIT_FAILURE;
     }
 
@@ -817,7 +817,7 @@ int main(int argc, char** argv)
     int retval = EXIT_FAILURE;
     bus = CommonSampleUtil::prepareBusAttachment();
     if (bus == NULL) {
-        std::cout << "Could not initialize BusAttachment." << std::endl;
+        cout << "Could not initialize BusAttachment." << endl;
         return 1;
     }
 
@@ -860,13 +860,13 @@ int main(int argc, char** argv)
         char buffer[50];
         snprintf(buffer, sizeof(buffer), "%s%d", path_root.c_str(), i);
         string path = string(buffer);
-        std::unique_ptr<Door> door = std::unique_ptr<Door>(new Door(advertiser, argv[i], false, path.c_str()));
+        unique_ptr<Door> door = unique_ptr<Door>(new Door(advertiser, argv[i], false, path.c_str()));
 
         if (ER_OK == door->GetStatus()) {
             if (ER_OK != door->PutOnBus()) {
                 cerr << "Failed to announce door existence !" << endl;
             }
-            g_doors.push_back(std::move(door));
+            g_doors.push_back(move(door));
         } else {
             cerr << "Failed to construct a door on location: " << argv[i] << " properly" << endl;
         }

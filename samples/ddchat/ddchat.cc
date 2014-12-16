@@ -27,7 +27,7 @@
 
 using namespace std;
 using namespace datadriven;
-using namespace gen::org_allseenalliance_sample;
+using namespace gen::com_example;
 
 class Participant :
     public ProvidedObject, public ChatParticipantInterface {
@@ -37,37 +37,37 @@ class Participant :
         ProvidedObject(advertiser),
         ChatParticipantInterface(this)
     {
-        this->name = name;
+        Name = name;
     }
 };
 
 class ChatListener :
     public Observer<ChatParticipantProxy>::Listener {
   public:
-    virtual void OnUpdate(const std::shared_ptr<ChatParticipantProxy>& p)
+    virtual void OnUpdate(const shared_ptr<ChatParticipantProxy>& p)
     {
         ChatParticipantProxy::Properties prop = p->GetProperties();
-        cout << "\"" << prop.name << "\" joined the conversation." << endl;
+        cout << "\"" << prop.Name << "\" joined the conversation." << endl;
         cout << "> ";
         cout.flush();
     }
 
-    virtual void OnRemove(const std::shared_ptr<ChatParticipantProxy>& p)
+    virtual void OnRemove(const shared_ptr<ChatParticipantProxy>& p)
     {
         ChatParticipantProxy::Properties prop = p->GetProperties();
-        cout << "\"" << prop.name << "\" left the conversation." << endl;
+        cout << "\"" << prop.Name << "\" left the conversation." << endl;
         cout << "> ";
         cout.flush();
     }
 };
 
 class MessageListener :
-    public SignalListener<ChatParticipantProxy, ChatParticipantProxy::Message> {
+    public SignalListener<ChatParticipantProxy, ChatParticipantProxy::NewMessage> {
   public:
-    virtual void OnSignal(const ChatParticipantProxy::Message& msg)
+    virtual void OnSignal(const ChatParticipantProxy::NewMessage& msg)
     {
         shared_ptr<ChatParticipantProxy> p = msg.GetEmitter();
-        cout << "[" << p->GetProperties().name << "] " << msg.message << endl;
+        cout << "[" << p->GetProperties().Name << "] " << msg.message << endl;
         cout << "> ";
         cout.flush();
     }
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
             break;
         }
 
-        participant.Message(input.c_str());
+        participant.NewMessage(input.c_str());
     }
 
     //participant.RemoveFromBus();

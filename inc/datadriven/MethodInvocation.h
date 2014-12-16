@@ -85,6 +85,8 @@ template <typename T> class MethodInvocation :
      * The most common practice is to call this right after receiving
      * the method invocation from the method call.
      *
+     * \param listener The listener to be called when a reply arrives.
+     *
      * \retval ER_OK When the listener is set correctly.
      * \retval ER_FAIL When the listener is already set.
      */

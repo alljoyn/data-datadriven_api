@@ -23,7 +23,7 @@
 #include "DoorProxy.h"
 
 using namespace std;
-using namespace gen::org_allseenalliance_sample;
+using namespace gen::com_example;
 
 class MyDoorListener :
     public datadriven::Observer<DoorProxy>::Listener {
@@ -34,8 +34,8 @@ class MyDoorListener :
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << "[listener] Update for door " << id << ": location = "
-             << prop.location.c_str() << ", open = " << prop.open << ", code = "
-             << door->Getcode()->GetReply().code << "." << endl;
+             << prop.Location.c_str() << ", open = " << prop.IsOpen << ", code = "
+             << door->GetKeyCode()->GetReply().KeyCode << "." << endl;
         cout << "> ";
         cout.flush();
     }
@@ -46,7 +46,7 @@ class MyDoorListener :
         const DoorProxy::Properties prop = door->GetProperties();
 
         cout << "[listener] Door " << id << " at location "
-             << prop.location.c_str() << " does no longer exist." << endl;
+             << prop.Location.c_str() << " does no longer exist." << endl;
         cout << "> ";
         cout.flush();
     }
@@ -60,8 +60,8 @@ class MyDoorSignalListener :
         const datadriven::ObjectId& id = door->GetObjectId();
         const DoorProxy::Properties prop = door->GetProperties();
 
-        cout << "[listener] " << signal.who.c_str() << " passed through a door " << id
-             << ": location = " << prop.location.c_str() << endl;
+        cout << "[listener] " << signal.name.c_str() << " passed through a door " << id
+             << ": location = " << prop.Location.c_str() << endl;
         cout << "> ";
         cout.flush();
     }
@@ -85,7 +85,7 @@ static void list_doors(datadriven::Observer<DoorProxy>* observer)
         datadriven::ObjectId id = it->GetObjectId();
         DoorProxy::Properties prop = it->GetProperties();
 
-        cout << "Door " << id << " location: " << prop.location.c_str() << " open: " << prop.open << endl;
+        cout << "Door " << id << " location: " << prop.Location.c_str() << " open: " << prop.IsOpen << endl;
     }
 }
 
@@ -96,7 +96,7 @@ static shared_ptr<DoorProxy> get_door_at_location(datadriven::Observer<DoorProxy
     for (; it != observer->end(); ++it) {
         DoorProxy::Properties prop = it->GetProperties();
 
-        if (!strcmp(prop.location.c_str(), location.c_str())) {
+        if (!strcmp(prop.Location.c_str(), location.c_str())) {
             return *it;
         }
     }

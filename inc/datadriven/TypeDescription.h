@@ -62,6 +62,25 @@ class TypeDescription {
         ALWAYS,
         INVALIDATES
     };
+    void AddProperty(const char* name,
+                     const char* signature,
+                     uint8_t access,
+                     EmitChangesSignal emits);
+
+    void AddMethod(const char* name,
+                   const char* inSig,
+                   const char* outSig,
+                   const char* argNames,
+                   uint8_t annotation = 0,
+                   const char* accessPerms = 0);
+
+    void AddSignal(const char* name,
+                   const char* sig,
+                   const char* argNames,
+                   uint8_t annotation = 0,
+                   const char* accessPerms = 0);
+
+  private:
     struct Property {
         const char* name;
         const char* sig;
@@ -83,25 +102,6 @@ class TypeDescription {
         uint8_t annotation;
         const char* accessPerms;
     };
-    void AddProperty(const char* name,
-                     const char* signature,
-                     uint8_t access,
-                     EmitChangesSignal emits);
-
-    void AddMethod(const char* name,
-                   const char* inSig,
-                   const char* outSig,
-                   const char* argNames,
-                   uint8_t annotation = 0,
-                   const char* accessPerms = 0);
-
-    void AddSignal(const char* name,
-                   const char* sig,
-                   const char* argNames,
-                   uint8_t annotation = 0,
-                   const char* accessPerms = 0);
-
-  private:
     std::vector<Property> properties;
     std::vector<Method> methods;
     std::vector<Signal> signals;
