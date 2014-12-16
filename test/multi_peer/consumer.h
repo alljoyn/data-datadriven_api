@@ -51,7 +51,7 @@ class Consumer :
 
   private:
     class EmitNumListener;
-    datadriven::Semaphore sync;
+    datadriven::Semaphore objSync;
     int consId;
     int numObj;
     shared_ptr<datadriven::Observer<MultiPeerProxy> > observer;

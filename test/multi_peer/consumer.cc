@@ -19,13 +19,14 @@
 
 #include "consumer.h"
 
+#define TIMEOUT 5000
+
 namespace test_system_multipeer {
 class Consumer::EmitNumListener :
     public datadriven::SignalListener<MultiPeerProxy, MultiPeerProxy::EmitNum> {
   public:
-    EmitNumListener(int consId,
-                    datadriven::Semaphore* sema) :
-        consId(consId), sema(sema)
+    EmitNumListener(int consId) :
+        consId(consId)
     {
     }
 
@@ -45,9 +46,11 @@ class Consumer::EmitNumListener :
      */
     void Validate()
     {
+        mutex.Lock();
         for (map<int, bool>::iterator it = idOk.begin(); it != idOk.end(); ++it) {
             assert(true == it->second);
         }
+        mutex.Unlock();
     }
 
     /**
@@ -55,8 +58,10 @@ class Consumer::EmitNumListener :
      */
     void Reset()
     {
+        mutex.Lock();
         idNumMap.clear();
         idOk.clear();
+        mutex.Unlock();
     }
 
     void OnSignal(const MultiPeerProxy::EmitNum& signal)
@@ -70,15 +75,20 @@ class Consumer::EmitNumListener :
             cout << "Consumer " << consId << " receives signal with num "
                  << signal.num << " from object with id " << id << endl;
             idOk[id] = true;
-            assert(ER_OK == sema->Post());
+            assert(ER_OK == sema.Post());
         }
         mutex.Unlock();
+    }
+
+    QStatus TimedWait(uint32_t ms)
+    {
+        return sema.TimedWait(ms);
     }
 
   private:
     mutable datadriven::Mutex mutex;
     int consId;
-    datadriven::Semaphore* sema;
+    datadriven::Semaphore sema;
     map<int, int> idNumMap;
     map<int, bool> idOk;
 };
@@ -88,7 +98,7 @@ Consumer::Consumer(int consId,
     consId(consId), numObj(numObj),
     observer(datadriven::Observer<MultiPeerProxy>::Create(this)), enl(NULL)
 {
-    enl = new EmitNumListener(consId, &sync);
+    enl = new EmitNumListener(consId);
     observer->AddSignalListener(*enl);
 };
 
@@ -100,12 +110,12 @@ Consumer::~Consumer()
 
 void Consumer::OnUpdate(const shared_ptr<MultiPeerProxy>& mpp)
 {
+    assert(ER_OK == mpp->GetStatus());
     int obj_id = mpp->GetProperties().id;
-
     cout << "Consumer " << consId << " receives object with id " << obj_id << endl;
     assert(objects.end() == objects.find(obj_id));
     objects[obj_id] = mpp;
-    assert(ER_OK == sync.Post());
+    assert(ER_OK == objSync.Post());
 }
 
 void Consumer::Test(int numLoops)
@@ -114,7 +124,7 @@ void Consumer::Test(int numLoops)
     for (int i = 0; i < numObj; i++) {
         cout << "Consumer " << consId << " waits for " << (numObj - i)
              << " object(s)" << endl;
-        assert(ER_OK == sync.Wait());
+        assert(ER_OK == objSync.TimedWait(TIMEOUT));
     }
     // loop discovered objects in ascending ID order
     cout << "Consumer " << consId << " checks all objects discovered" << endl;
@@ -139,15 +149,11 @@ void Consumer::Test(int numLoops)
                  << id << " and number " << num << endl;
             enl->Expect(id, num);
             it->RequestEmitNum(num);
+            // wait for 'response' signal (the one with id == testNum)
+            assert(ER_OK == enl->TimedWait(TIMEOUT));
             cnt++;
         }
         assert(numObj == cnt);
-        // wait for signals
-        for (int i = numObj; i > 0; i--) {
-            cout << "Consumer " << consId << " loop " << loop << "/" << numLoops
-                 << " waits for " << i << " signal(s)" << endl;
-            assert(ER_OK == sync.Wait());
-        }
         // validate all signals received
         cout << "Consumer " << consId << " loop " << loop << "/" << numLoops
              << " checks all signals received" << endl;

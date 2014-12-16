@@ -138,7 +138,7 @@ QStatus ObserverBase::RemoveSignalListener(SignalListenerBase* listener)
     SignalListenerMap::iterator it = signalListeners.find(listener->GetMember());
     if (it != signalListeners.end()) {
         if (listener == it->second) {
-            // Unregister from Bus Attachement
+            // Unregister from Bus Attachment
             ajn::BusAttachment& bus = busConnectionImpl->GetBusAttachment();
             status = bus.UnregisterSignalHandler(static_cast<ajn::MessageReceiver*>(listener),
                                                  listener->GetHandler(), listener->GetMember(), NULL);

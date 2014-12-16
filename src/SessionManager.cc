@@ -214,7 +214,7 @@ void SessionManager::SessionLost(ajn::SessionId sessionId, SessionLostReason rea
         QCC_DbgPrintf(("Lost session %lu", (unsigned long)sessionId));
 
         if (ER_OK != errorStatus) {
-            QCC_LogError(errorStatus, ("Consumer session manager not properly initialized"));
+            QCC_LogError(errorStatus, ("Session manager not properly initialized"));
             break;
         }
 
@@ -280,7 +280,7 @@ void SessionManager::AutoPingListener::DestinationFound(const qcc::String& group
     QCC_DbgHLPrintf(("Destination found '%s'", destination.c_str()));
 
     if ((NULL == sessionMgr) || ER_OK != (sessionMgr->GetStatus())) {
-        QCC_LogError(ER_FAIL, ("Consumer session manager not properly initialized"));
+        QCC_LogError(ER_FAIL, ("Session manager not properly initialized"));
         return;
     }
 
@@ -309,7 +309,7 @@ void SessionManager::AutoPingListener::DestinationLost(const qcc::String& group,
     QCC_DbgHLPrintf(("Destination lost '%s'", destination.c_str()));
 
     if ((NULL == sessionMgr) || ER_OK != (sessionMgr->GetStatus())) {
-        QCC_LogError(ER_FAIL, ("Consumer session manager not properly initialized"));
+        QCC_LogError(ER_FAIL, ("Session manager not properly initialized"));
         return;
     }
 

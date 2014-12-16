@@ -89,6 +89,7 @@ static Provider* _prov = NULL;
 static void sig_handler(int sig)
 {
     if (NULL != _prov) {
+        cout << "Signal " << sig << " received" << endl;
         _prov->Stop();
     }
 }
