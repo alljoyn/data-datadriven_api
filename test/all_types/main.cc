@@ -437,9 +437,7 @@ static void call_method_no_out(const shared_ptr<AllTypesProxy>& proxy)
     std::shared_ptr<datadriven::MethodInvocation<AllTypesProxy::MethodWithoutOutReply> > inv = proxy->MethodWithoutOut(
         true);
     cout << "Consumer waiting for no out args reply" << endl;
-#ifndef NDEBUG
     const AllTypesProxy::MethodWithoutOutReply& reply = inv->GetReply();
-#endif
     assert(datadriven::MethodInvocation<AllTypesProxy::MethodWithoutOutReply>::READY == inv->GetState());
     assert(ER_OK == reply.GetStatus());
     cout << "Consumer validated no out args reply" << endl;
@@ -460,9 +458,7 @@ static void call_method_no_in(const shared_ptr<AllTypesProxy>& proxy)
     cout << "Consumer calling no in args method on " << proxy->GetObjectId() << endl;
     std::shared_ptr<datadriven::MethodInvocation<AllTypesProxy::MethodWithoutInReply> > inv = proxy->MethodWithoutIn();
     cout << "Consumer waiting for no in args reply" << endl;
-#ifndef NDEBUG
     const AllTypesProxy::MethodWithoutInReply& reply = inv->GetReply();
-#endif
     assert(datadriven::MethodInvocation<AllTypesProxy::MethodWithoutInReply>::READY == inv->GetState());
     assert(ER_OK == reply.GetStatus());
     assert(true == reply.arg_out_boolean);

@@ -18,6 +18,12 @@ testenv = env.Clone()
 testenv.Append(CPPPATH = ['generated'])
 testenv.Prepend(LIBS = ['ajdd'])
 
+# always build with NDEBUG unset so we can use assert()
+defs = testenv['CPPDEFINES']
+if 'NDEBUG' in defs:
+    defs.remove('NDEBUG')
+testenv.Replace(CPPDEFINES = defs)
+
 tests = []
 
 for test in Glob('*'):

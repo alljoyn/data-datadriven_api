@@ -18,7 +18,7 @@ set -x
 set -e
 SELF_DIR=$(cd $(dirname $0) > /dev/null; pwd)
 
-if [ -z ${AJ_ROOT} ]; then
+if [ -z "${AJ_ROOT}" ]; then
     AJ_ROOT="${SELF_DIR}/../../.."
 fi
 
@@ -26,7 +26,9 @@ AJN_DD_PATH=$(cd "${SELF_DIR}/.." > /dev/null; pwd)
 
 
 AJN_DAEMON_PNAME="alljoyn-daemon"
-VARIANT="debug"
+if [ -z "${VARIANT}" ]; then
+    VARIANT="debug"
+fi
 
 if [ -d "${AJN_DD_PATH}/build/linux/x86/${VARIANT}" ]; then
     PLATFORM="x86"

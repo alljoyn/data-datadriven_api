@@ -133,9 +133,7 @@ static void test_method_timeout(const MethodsProxy& mp)
     std::shared_ptr<datadriven::MethodInvocation<MethodsProxy::SleepReply> > inv = mp.Sleep(TIMEOUT * 2,
                                                                                             TIMEOUT);
     cout << "Consumer waiting for reply" << endl;
-#ifndef NDEBUG
     const MethodsProxy::SleepReply& reply = inv->GetReply();
-#endif
     cout << "Consumer reply ready" << endl;
     assert(inv->READY == inv->GetState());
     assert(ER_TIMEOUT == reply.GetStatus());
