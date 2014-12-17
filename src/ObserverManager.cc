@@ -98,13 +98,13 @@ class ObserverManagerTask :
     ObserverManager::Action action;
 };
 
-/* ajn::services::AsyncTask */
+/* datadriven::AsyncTask */
 void ObserverManager::OnEmptyQueue()
 {
 }
 
-/* ajn::services::AsyncTask */
-void ObserverManager::OnTask(ajn::services::TaskData const* taskdata)
+/* datadriven::AsyncTask */
+void ObserverManager::OnTask(TaskData const* taskdata)
 {
     const ObserverManagerTask* data  = static_cast<const ObserverManagerTask*>(taskdata);
     data->Execute();

@@ -36,9 +36,6 @@ if env['CXX'][:5] == 'clang':
 if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../core/alljoyn/services/about/SConscript'):
     env.SConscript('../../core/alljoyn/services/about/SConscript')
 
-if not env.has_key('_ALLJOYN_SERVICES_COMMON_') and os.path.exists('../../services/base/services_common/SConscript'):
-    env.SConscript('../../services/base/services_common/SConscript')
-
 # DataDriven API uses AllJoyn Core, so always try to build it
 if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
     env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
@@ -62,7 +59,7 @@ ddenv['DD_DISTDIR'] = ddenv['DISTDIR'] + '/datadriven_cpp'
 ddenv['DD_OBJDIR'] = ddenv['OBJDIR'] + '/datadriven_cpp'
 
 # Set up DataDriven API dist directory
-ddenv.Append(LIBS = ['alljoyn_about', 'alljoyn_services_common'])
+ddenv.Append(LIBS = ['alljoyn_about'])
 
 # Add support for multiple build targets in the same work set.
 ddenv.VariantDir('$DD_OBJDIR/lib', 'src', duplicate = 0)

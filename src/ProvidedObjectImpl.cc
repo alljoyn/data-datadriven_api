@@ -14,8 +14,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <alljoyn/services_common/GuidUtil.h>
-
 #include <datadriven/ProvidedInterface.h>
 #include <datadriven/ProvidedObject.h>
 
@@ -25,6 +23,7 @@
 #include "ObjectAdvertiserImpl.h"
 #include "ProvidedObjectImpl.h"
 #include "RegisteredTypeDescription.h"
+#include "common/GuidUtil.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
@@ -83,7 +82,7 @@ ProvidedObjectImpl::~ProvidedObjectImpl()
 qcc::String ProvidedObjectImpl::GeneratePath()
 {
     qcc::String guid;
-    ajn::services::GuidUtil::GetInstance()->GenerateGUID(&guid);
+    GuidUtil::GetInstance()->GenerateGUID(&guid);
     return "/O" + guid;
 }
 

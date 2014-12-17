@@ -33,7 +33,6 @@
 
 #include "CommonSampleUtil.h"
 #include <alljoyn/about/AboutServiceApi.h>
-#include <alljoyn/services_common/LogModulesNames.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
 using namespace std;

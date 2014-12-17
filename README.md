@@ -89,9 +89,9 @@ The samples have been compiled with a built-in router. Therefore, there is no
 need to start the AllJoyn routing daemon.
 
 DDAPI applications depend on `libajdd.so`, which in turn depends on
-`liballjoyn.so`, `liballjoyn_about.so` and `liballjoyn_services_common.so`.
-You'll need to include the location where you installed these libraries in the
-`LD_LIBRARY_PATH` environment variable. For example:
+`liballjoyn.so` and `liballjoyn_about.so`. You'll need to include the location
+where you installed these libraries in the `LD_LIBRARY_PATH` environment
+variable. For example:
 
     $ LD_LIBRARY_PATH=${ALLSEEN_INSTALL_PATH}/lib/:${LD_LIBRARY_PATH}
     $ export LD_LIBRARY_PATH
@@ -147,5 +147,3 @@ the generated code), you should link your application to
 * libajdd.so
 * liballjoyn_about.so
 * liballjoyn.so
-* liballjoyn_services_common.so
-

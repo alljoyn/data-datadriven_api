@@ -40,7 +40,7 @@ fi
 PLATFORM_ROOT="${AJN_DD_PATH}/build/linux/${PLATFORM}/${VARIANT}"
 OBJ_ROOT="${PLATFORM_ROOT}/obj/datadriven_cpp"
 
-LIB_PATH="${PLATFORM_ROOT}/dist/datadriven_cpp/lib:${PLATFORM_ROOT}/dist/cpp/lib:${PLATFORM_ROOT}/dist/about/lib:${PLATFORM_ROOT}/dist/services_common/lib"
+LIB_PATH="${PLATFORM_ROOT}/dist/datadriven_cpp/lib:${PLATFORM_ROOT}/dist/cpp/lib:${PLATFORM_ROOT}/dist/about/lib"
 
 export LD_LIBRARY_PATH="${LIB_PATH}"
 

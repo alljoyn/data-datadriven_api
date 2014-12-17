@@ -63,6 +63,7 @@ BusConnectionImpl::BusConnectionImpl(BusAttachment* _ba) :
                 QCC_LogError(status, ("Failed to connect bus attachment"));
             }
         }
+        std::cout << getpid() << ": BUS = " << ba->GetUniqueName().c_str() << std::endl;
     }
 }
 

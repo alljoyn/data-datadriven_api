@@ -21,20 +21,20 @@
 #include <memory>
 
 #include <alljoyn/about/AnnounceHandler.h>
-#include <alljoyn/services_common/AsyncTaskQueue.h>
 
 #include <qcc/String.h>
 #include <datadriven/Mutex.h>
 
 #include "ObserverCache.h"
 #include "SessionManager.h"
+#include "common/AsyncTaskQueue.h"
 
 namespace datadriven {
 class BusConnectionImpl;
 
 class ObserverManager :
     private ajn::services::AnnounceHandler,
-    private ajn::services::AsyncTask,
+    private AsyncTask,
     private SessionManager::Listener {
   public:
     enum class Action :
@@ -84,7 +84,7 @@ class ObserverManager :
     // Asynchronous task handling
 
     class Task :
-        public ajn::services::TaskData {
+        public TaskData {
       public:
         virtual void Execute() const = 0;
     };
@@ -139,7 +139,7 @@ class ObserverManager :
     /**
      * Asynchronous task queue for consumer related actions.
      */
-    mutable ajn::services::AsyncTaskQueue asyncTaskQueue;
+    mutable AsyncTaskQueue asyncTaskQueue;
 
     /**
      * Register an new about announce handler for a given \a ifName
@@ -213,10 +213,10 @@ class ObserverManager :
     void OnSessionLost(const SessionManager::Session& session,
                        const ajn::SessionId& sessionId);
 
-    /* ajn::services::AsyncTask */
+    /* datadriven::AsyncTask */
     virtual void OnEmptyQueue();
 
-    virtual void OnTask(ajn::services::TaskData const* taskdata);
+    virtual void OnTask(TaskData const* taskdata);
 
     std::vector<std::weak_ptr<ObserverCache> > GetObserverCaches(const std::vector<qcc::String>& ifNames) const;
 };

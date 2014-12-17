@@ -253,7 +253,7 @@ void ObjectAdvertiserImpl::OnEmptyQueue()
 {
 }
 
-void ObjectAdvertiserImpl::OnTask(ajn::services::TaskData const* taskData)
+void ObjectAdvertiserImpl::OnTask(TaskData const* taskData)
 {
     const Task* task = static_cast<const Task*>(taskData);
     task->Execute();

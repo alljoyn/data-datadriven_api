@@ -22,14 +22,15 @@
 #include <memory>
 
 #include <qcc/String.h>
-#include <datadriven/Mutex.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/about/AboutClient.h>
-#include <alljoyn/services_common/AsyncTaskQueue.h>
 #include <alljoyn/PingListener.h>
 #include <alljoyn/AutoPinger.h>
+
+#include <datadriven/Mutex.h>
+#include "common/AsyncTaskQueue.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_CONSUMER"
@@ -38,7 +39,7 @@ namespace datadriven {
 class SessionManager :
     private ajn::SessionListener,
     private ajn::BusAttachment::JoinSessionAsyncCB,
-    private ajn::services::AsyncTask {
+    private AsyncTask {
   public:
     /**
      * Constructs the session manager
@@ -254,7 +255,7 @@ class SessionManager :
     /**
      * An asynchronous task queue that runs tasks on behalf of the session manager or one of its users.
      */
-    ajn::services::AsyncTaskQueue async;
+    AsyncTaskQueue async;
 
     /**
      * The corresponding bus attachment this session manager uses to set up sessions to others.
@@ -367,7 +368,7 @@ class SessionManager :
                             Session right);
 
     class LeaveSessionData :
-        public ajn::services::TaskData {
+        public TaskData {
       private:
         ajn::SessionId sessionId;
 
@@ -387,7 +388,7 @@ class SessionManager :
     /**
      * Called when a new task on the asynchronous task queue needs to be handled.
      */
-    virtual void OnTask(ajn::services::TaskData const* taskdata);
+    virtual void OnTask(TaskData const* taskdata);
 };
 } /* namespace datadriven */
 #undef QCC_MODULE

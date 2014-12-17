@@ -29,9 +29,9 @@
 #include <alljoyn/Session.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
-#include <alljoyn/services_common/AsyncTaskQueue.h>
 
 #include "BusConnectionImpl.h"
+#include "common/AsyncTaskQueue.h"
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
@@ -45,7 +45,7 @@ class ProvidedObjectImpl;
  * - unregister them from the Bus and hide them again from About.
  */
 class ObjectAdvertiserImpl :
-    private ajn::services::AsyncTask, ajn::SessionPortListener {
+    private AsyncTask, ajn::SessionPortListener {
   public:
     ObjectAdvertiserImpl(ajn::BusAttachment* bus,
                          ajn::services::AboutPropertyStoreImpl* aboutPropertyStore = NULL);
@@ -64,7 +64,7 @@ class ObjectAdvertiserImpl :
                            ajn::Message& message);
 
     class Task :
-        public ajn::services::TaskData {
+        public TaskData {
       public:
         virtual void Execute() const = 0;
     };
@@ -75,7 +75,7 @@ class ObjectAdvertiserImpl :
 
   private:
     /** Asynchronous task queue used by ProvidedObject to schedule a task */
-    mutable ajn::services::AsyncTaskQueue providerAsync;
+    mutable AsyncTaskQueue providerAsync;
 
     /** Mutex that protects the providers set */
     mutable datadriven::Mutex providersMutex;
@@ -110,10 +110,10 @@ class ObjectAdvertiserImpl :
                                ajn::SessionId id,
                                const char* joiner);
 
-    /* ajn::services::AsyncTask */
+    /* datadriven::AsyncTask */
     virtual void OnEmptyQueue();
 
-    virtual void OnTask(ajn::services::TaskData const* taskdata);
+    virtual void OnTask(TaskData const* taskdata);
 
     ObjectAdvertiserImpl(const ObjectAdvertiserImpl&);
     ObjectAdvertiserImpl& operator=(const ObjectAdvertiserImpl&);

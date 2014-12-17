@@ -36,11 +36,9 @@ if env.get('ALLJOYN_DISTDIR'):
     # normalize ALLJOYN_DISTDIR first
     env['ALLJOYN_DISTDIR'] = env.Dir('$ALLJOYN_DISTDIR')
     env.Append(CPPPATH = [ env.Dir('$ALLJOYN_DISTDIR/cpp/inc'),
-                           env.Dir('$ALLJOYN_DISTDIR/about/inc'),
-                           env.Dir('$ALLJOYN_DISTDIR/services_common/inc') ])
+                           env.Dir('$ALLJOYN_DISTDIR/about/inc') ])
     env.Append(LIBPATH = [ env.Dir('$ALLJOYN_DISTDIR/cpp/lib'),
-                           env.Dir('$ALLJOYN_DISTDIR/about/lib'),
-                           env.Dir('$ALLJOYN_DISTDIR/services_common/lib') ])
+                           env.Dir('$ALLJOYN_DISTDIR/about/lib') ])
 
 env['bindings'] = set([ b.strip() for b in env['BINDINGS'].split(',') ])
 
