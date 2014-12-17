@@ -45,8 +45,8 @@ class ObserverManagerTask :
 
     void Execute() const
     {
-        typedef std::pair<std::shared_ptr<ObserverCache>, std::shared_ptr<ProxyInterface> > CacheProxyEntry;
-        typedef std::multimap<std::shared_ptr<ObserverCache>, std::shared_ptr<ProxyInterface> > CacheProxyMultiMap;
+        typedef std::pair<std::shared_ptr<ObserverCache>, ObserverCache::NotificationSet> CacheProxyEntry;
+        typedef std::multimap<std::shared_ptr<ObserverCache>, ObserverCache::NotificationSet> CacheProxyMultiMap;
         CacheProxyMultiMap usedcaches;
         for (const std::weak_ptr<ObserverCache>& wcache : wcaches) {
             std::shared_ptr<ObserverCache> cache = wcache.lock();
@@ -79,11 +79,11 @@ class ObserverManagerTask :
         for (const CacheProxyEntry& entry : usedcaches) {
             switch (action) {
             case ObserverManager::Action::ADD :
-                entry.first->NotifyObjectExistence(entry.second, true);
+                entry.first->NotifyObjectExistence(entry.second.interface, true, entry.second.observers);
                 break;
 
             case ObserverManager::Action::REMOVE:
-                entry.first->NotifyObjectExistence(entry.second, false);
+                entry.first->NotifyObjectExistence(entry.second.interface, false, entry.second.observers);
                 break;
 
             default:

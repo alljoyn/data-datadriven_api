@@ -83,12 +83,13 @@ void ObserverCache::NotifyObserver(std::weak_ptr<ObserverBase> observer)
     mutex.Unlock();
 }
 
-void ObserverCache::NotifyObjectExistence(std::shared_ptr<ProxyInterface> proxyObj, bool add)
+void ObserverCache::NotifyObjectExistence(std::shared_ptr<ProxyInterface> proxyObj, bool add,
+                                          ObserverSet notifiedObservers)
 {
     if (nullptr != proxyObj) {
         // Notify All observers
-        for (ObserverCache::ObserverSet::const_iterator vectorIterator = observers.begin();
-             vectorIterator != observers.end();
+        for (ObserverCache::ObserverSet::const_iterator vectorIterator = notifiedObservers.begin();
+             vectorIterator != notifiedObservers.end();
              vectorIterator++) {
             std::shared_ptr<ObserverBase> observer = (*vectorIterator).lock();
             if (observer) {
@@ -107,7 +108,7 @@ void ObserverCache::SetAllocator(std::weak_ptr<ObjectAllocator> alloc)
     allocator = alloc;
 }
 
-std::shared_ptr<ProxyInterface> ObserverCache::AddObject(const ObjectId& objId)
+ObserverCache::NotificationSet ObserverCache::AddObject(const ObjectId& objId)
 {
     std::shared_ptr<ProxyInterface> proxyObj;
     mutex.Lock();
@@ -155,12 +156,13 @@ std::shared_ptr<ProxyInterface> ObserverCache::AddObject(const ObjectId& objId)
                            (unsigned long)objId.GetSessionId()));
         }
     }
+    NotificationSet snapshot = { proxyObj, GetObservers() };
     mutex.Unlock();
 
-    return proxyObj;
+    return snapshot;
 }
 
-std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objId)
+ObserverCache::NotificationSet ObserverCache::RemoveObject(const ObjectId& objId)
 {
     /* We agreed we would not remove the object, but rather convert the strong reference to a weak reference. */
 
@@ -175,13 +177,14 @@ std::shared_ptr<ProxyInterface> ObserverCache::RemoveObject(const ObjectId& objI
     livingObjects.erase(it);
     deadObjects.insert(std::pair<ObjectId, std::weak_ptr<ProxyInterface> >(objId, weak));
 
+    NotificationSet snapshot = { proxyObj, GetObservers() };
     mutex.Unlock();
 
     QCC_DbgPrintf(("Remove object @%s, path = '%s', session = %lu",
                    objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
     GarbageCollect();         /* TODO: not always trigger this */
 
-    return proxyObj;
+    return snapshot;
 }
 
 std::shared_ptr<ProxyInterface> ObserverCache::UpdateObject(const ObjectId& objId, const ajn::MsgArg* dict)
@@ -253,6 +256,11 @@ std::vector<std::shared_ptr<ProxyInterface> > ObserverCache::LivingObjects() con
     }
 
     return objects;
+}
+
+ObserverCache::ObserverSet ObserverCache::GetObservers() const
+{
+    return observers;
 }
 
 // PRIVATE //

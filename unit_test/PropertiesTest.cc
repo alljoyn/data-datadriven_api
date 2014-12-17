@@ -178,16 +178,23 @@ class PropertiesTests :
     void AddObject()
     {
         std::shared_ptr<BusConnectionImpl> bc = observer->GetBusConnection();
-        std::shared_ptr<ProxyInterface> intf = ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->AddObject(*id);
-        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(intf, true);
+        ObserverCache::NotificationSet notificationSet =
+            ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->AddObject(*id);
+        ObserverCache::ObserverSet observers = ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->GetObservers();
+        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(notificationSet.interface,
+                                                                                      true,
+                                                                                      notificationSet.observers);
         _sync.Wait();
     }
 
     void RemoveObject()
     {
         std::shared_ptr<BusConnectionImpl> bc = observer->GetBusConnection();
-        std::shared_ptr<ProxyInterface> intf = ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->RemoveObject(*id);
-        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(intf, false);
+        ObserverCache::NotificationSet notificationSet =
+            ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->RemoveObject(*id);
+        ObserverManager::GetInstance(bc)->GetCache(IFACE_NAME)->NotifyObjectExistence(notificationSet.interface,
+                                                                                      false,
+                                                                                      notificationSet.observers);
         _sync.Wait();
     }
 

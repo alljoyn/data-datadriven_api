@@ -30,6 +30,20 @@ class ObjectAllocator;
 
 class ObserverCache {
   public:
+    /**
+     * Set of observers for a specific proxy interface.
+     */
+    typedef std::set<std::weak_ptr<ObserverBase>, std::owner_less <std::weak_ptr<ObserverBase> > > ObserverSet;
+
+    /**
+     * This structure keeps a snapshot of an interface instance and the observers to be notified about
+     * the creation/removal of that interface.
+     */
+    typedef struct {
+        std::shared_ptr<ProxyInterface> interface;
+        ObserverSet observers;
+    } NotificationSet;
+
     ObserverCache(const qcc::String ifName);
 
     ~ObserverCache();
@@ -69,9 +83,9 @@ class ObserverCache {
      * Use the NotifyObjectExistence method to trigger the application.
      *
      * \param objId the object identifier
-     * \return the new proxy interface object
+     * \return a struct with change to be notified and the observers to notify
      */
-    std::shared_ptr<ProxyInterface> AddObject(const ObjectId& objId);
+    NotificationSet AddObject(const ObjectId& objId);
 
     /**
      * Remove an object identified by \a objId
@@ -79,9 +93,9 @@ class ObserverCache {
      * Use the NotifyObjectExistence method to trigger the application.
      *
      * \param objId the object identifier
-     * \return the removed proxy interface object
+     * \return a struct with change to be notified and the observers to notify
      */
-    std::shared_ptr<ProxyInterface> RemoveObject(const ObjectId& objId);
+    NotificationSet RemoveObject(const ObjectId& objId);
 
     /**
      * Update an object identified by \a objId to the cache using \a dict
@@ -101,7 +115,8 @@ class ObserverCache {
      * \param add added/removed
      */
     void NotifyObjectExistence(std::shared_ptr<ProxyInterface> obj,
-                               bool add);
+                               bool add,
+                               ObserverSet observers);
 
     /**
      * This will return, by definition, a living object
@@ -114,11 +129,12 @@ class ObserverCache {
     /* TODO: REPLACE THIS NAIVE APPROACH (by reusing the iterator on livingobjects*/
     std::vector<std::shared_ptr<ProxyInterface> > LivingObjects() const;
 
-  private:
     /**
-     * Set of observers for a specific proxy interface.
+     * Returns the set of observers.
      */
-    typedef std::set<std::weak_ptr<ObserverBase>, std::owner_less <std::weak_ptr<ObserverBase> > > ObserverSet;
+    ObserverSet GetObservers() const;
+
+  private:
     ObserverSet observers;
 
     /* ignore busAttachment here (not relevant and probably will go out anyway) */
