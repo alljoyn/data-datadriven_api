@@ -53,8 +53,8 @@ class Provider :
         store()
     {
         cout << "Provider for " << busName << " on port " << port << endl;
-        assert(ER_OK == bus.Start());
-        assert(ER_OK == bus.Connect());
+        EXPECT_EQ(ER_OK, bus.Start());
+        EXPECT_EQ(ER_OK, bus.Connect());
         QStatus status = bus.RequestName(
             busName,
             DBUS_NAME_FLAG_ALLOW_REPLACEMENT | DBUS_NAME_FLAG_REPLACE_EXISTING |
@@ -62,13 +62,13 @@ class Provider :
         if (ER_DBUS_REQUEST_NAME_REPLY_EXISTS == status) {
             cout << "Same provider name re-used" << endl;
         } else {
-            assert(ER_OK == status);
+            EXPECT_EQ(ER_OK, status);
         }
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
-        assert(ER_OK == bus.BindSessionPort(port, opts, *this));
+        EXPECT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
         // about set up
         about = new AboutService(bus, store);
-        assert(NULL != about);
+        EXPECT_TRUE(NULL != about);
         about->Register(port);
     }
 

@@ -268,7 +268,7 @@ The resulting data model looks like this:
     <method name="Close">
     </method>
     <signal name="PersonPassedThrough">
-      <arg name="Name" type="s"/>
+      <arg name="name" type="s"/>
     </signal>
   </interface>
 </node>
@@ -641,7 +641,7 @@ class PPTListener : public datadriven::SignalListener<DoorProxy, DoorProxy::Pers
   public:
     void onSignal(const DoorProxy::PersonPassedThrough& signal)
     {
-        const qcc::String name = signal.Name; // signal argument
+        const qcc::String name = signal.name; // signal argument
         const shared_ptr<DoorProxy> door = signal.GetEmitter();
         const DoorProxy::Properties prop = door->GetProperties();
 

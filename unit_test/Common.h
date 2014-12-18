@@ -211,7 +211,7 @@ class TestObjectSignalListener :
 
     void OnSignal(const SimpleTestObjectProxy::Test& signal)
     {
-        assert(qcc::String(DEFAULT_TEST_NAME).compare(signal.test) == 0);
+        EXPECT_EQ(qcc::String(DEFAULT_TEST_NAME).compare(signal.test), 0);
         semaphore.Post();
     }
 
