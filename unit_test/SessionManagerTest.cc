@@ -41,8 +41,6 @@ using namespace ajn;
 using namespace services;
 using namespace datadriven;
 
-static Semaphore _sem;
-
 #define IFACE "org.allseenalliance.test.SessionTest"
 #define PROP "Property"
 
@@ -116,12 +114,14 @@ class SessionManagerTest :
 class TestSessionListener :
     public SessionManager::Listener {
   public:
+    Semaphore sem;
+
     virtual void OnSessionEstablished(const SessionManager::Session& session,
                                       const ajn::SessionId& sessionId)
     {
         cout << "Session established for: " << session.GetBusName().c_str() << "/" << session.GetPort() << endl;
         sessions[session] = sessionId;
-        _sem.Post();
+        sem.Post();
     }
 
     virtual void OnSessionLost(const SessionManager::Session& session,
@@ -129,7 +129,7 @@ class TestSessionListener :
     {
         cout << "Session lost for: " << session.GetBusName().c_str() << "/" << session.GetPort() << endl;
         sessions.erase(session);
-        _sem.Post();
+        sem.Post();
     }
 
     bool Exists(const char* busName, ajn::SessionPort port)
@@ -196,7 +196,7 @@ TEST_F(SessionManagerTest, SetupSession) {
     EXPECT_EQ(0u, sessionId);
     Provider provider(busName, port);
 
-    _sem.Wait();
+    listener.sem.Wait();
     EXPECT_TRUE(sessionMgr.IsSessionEstablished(busName, port));
     EXPECT_TRUE(sessionMgr.GetSessionId(busName, port, sessionId));
     EXPECT_NE(0u, sessionId);
@@ -227,7 +227,7 @@ TEST_F(SessionManagerTest, SessionRefCounting) {
     EXPECT_EQ(0u, sessionId);
     Provider provider(busName, port);
 
-    _sem.Wait();
+    listener.sem.Wait();
     EXPECT_TRUE(sessionMgr.IsSessionEstablished(busName, port));
     EXPECT_TRUE(sessionMgr.GetSessionId(busName, port, sessionId)); // refcount = 3
     EXPECT_NE(0u, sessionId);
@@ -263,7 +263,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionSamePeer) {
     for (int port = beginPort, i = 0; port < endPort; port++, i++) {
         provider[i] = new Provider(busName, port);
         EXPECT_FALSE(sessionMgr.GetSessionId(busName, port, sessionId));
-        _sem.Wait();
+        listener.sem.Wait();
     }
 
     for (int port = beginPort; port < endPort; port++) {
@@ -275,7 +275,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionSamePeer) {
 
     for (int port = beginPort, i = 0; port < endPort; port++, i++) {
         delete provider[i];
-        _sem.Wait();
+        listener.sem.Wait();
         sessionId = 0u;
         EXPECT_FALSE(sessionMgr.IsSessionEstablished(busName, port));
         EXPECT_FALSE(sessionMgr.GetSessionId(busName, port, sessionId));
@@ -307,7 +307,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionDifferentPeers) {
         busName.append('a' + i);
         provider[i] = new Provider(busName.c_str(), port);
         EXPECT_FALSE(sessionMgr.GetSessionId(busName, port, sessionId));
-        _sem.Wait();
+        listener.sem.Wait();
     }
 
     for (int port = beginPort, i = 0; port < endPort; port++, i++) {
@@ -323,7 +323,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionDifferentPeers) {
         qcc::String busName("test.Provider.");
         busName.append('a' + i);
         delete provider[i];
-        _sem.Wait();
+        listener.sem.Wait();
         sessionId = 0u;
         EXPECT_FALSE(sessionMgr.IsSessionEstablished(busName.c_str(), port));
         EXPECT_FALSE(sessionMgr.GetSessionId(busName, port, sessionId));
