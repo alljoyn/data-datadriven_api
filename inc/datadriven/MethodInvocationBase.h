@@ -136,6 +136,16 @@ class MethodInvocationBase :
      */
     virtual void HandleReply() = 0;
 
+    /**
+     * \private
+     * To check if there is a listener set. We need to know this
+     * whether we want to schedule the listener or not.
+     *
+     * \retval true When a listener is set.
+     * \retval false When a listener is not set.
+     */
+    virtual bool HasListener() = 0;
+
   protected:
     /** \private
      * state of the method reply, can be either WAITING or READY

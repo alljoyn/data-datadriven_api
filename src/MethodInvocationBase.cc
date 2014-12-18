@@ -63,6 +63,7 @@ MethodInvocationBase::~MethodInvocationBase()
     if (nullptr != sem) {
         delete sem;
     }
+    weak_this.reset();
 }
 
 MethodInvocationBase::MethodInvocationBase(MethodInvocationBase && inv) :
@@ -198,8 +199,11 @@ void MethodInvocationBase::OnReplyMessage(ajn::Message& message, void* context)
         }
         GetConsumerMethodReply().SetErrorName(errorName);
         GetConsumerMethodReply().SetErrorDescription(errorDescription);
+        if (shared_this->HasListener() && state != CANCELLED) {
+            ScheduleMethodReplyListener();
+        }
         SetReplyStatus(status);
-        ScheduleMethodReplyListener();
+
         if (nullptr != sem) {
             sem->Post();
         }

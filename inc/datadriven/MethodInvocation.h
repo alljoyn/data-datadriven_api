@@ -145,11 +145,28 @@ template <typename T> class MethodInvocation :
      */
     virtual void HandleReply()
     {
-        methodReplyListenerMutex.Lock();
         if (methodReplyListener) {
             methodReplyListener->OnReply(reply);
         }
+    }
+
+    /**
+     * \private
+     * To check if there is a listener set. We need to know this
+     * whether we want to schedule the listener or not.
+     *
+     * \retval true When a listener is set.
+     * \retval false When a listener is not set.
+     */
+    virtual bool HasListener()
+    {
+        bool ret = false;
+        methodReplyListenerMutex.Lock();
+        if (methodReplyListener) {
+            ret = true;
+        }
         methodReplyListenerMutex.Unlock();
+        return ret;
     }
 
   private:
