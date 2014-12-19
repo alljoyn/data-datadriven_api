@@ -16,7 +16,7 @@ Import('env')
 
 appenv = env.Clone()
 appenv.Append(CPPPATH = ['generated'])
-appenv.Prepend(LIBS = ['ajdd'])
+appenv.Prepend(LIBS = ['alljoyn_ddapi'])
 
 # Use bundled router?
 if appenv['BR'] == 'on':

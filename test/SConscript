@@ -16,7 +16,7 @@ Import('env')
 
 testenv = env.Clone()
 testenv.Append(CPPPATH = ['generated'])
-testenv.Prepend(LIBS = ['ajdd'])
+testenv.Prepend(LIBS = ['alljoyn_ddapi'])
 
 # always build with NDEBUG unset so we can use assert()
 defs = testenv['CPPDEFINES']

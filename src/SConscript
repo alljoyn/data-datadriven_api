@@ -27,11 +27,11 @@ libenv.Append(CPPPATH = ['.', '#inc'])
 
 # Static library
 objs = libenv.Object(srcs)
-libs.append(libenv.StaticLibrary('ajdd', objs))
+libs.append(libenv.StaticLibrary('alljoyn_ddapi', objs))
 
 # Shared library
 if libenv.get('LIBTYPE', 'static') != 'static':
     shobjs = libenv.SharedObject(srcs)
-    libs.append(libenv.SharedLibrary('ajdd', shobjs))
+    libs.append(libenv.SharedLibrary('alljoyn_ddapi', shobjs))
 
 Return ('libs')

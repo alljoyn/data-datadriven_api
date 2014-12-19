@@ -88,7 +88,7 @@ get you started in application development using the DDAPI.
 The samples have been compiled with a built-in router. Therefore, there is no
 need to start the AllJoyn routing daemon.
 
-DDAPI applications depend on `libajdd.so`, which in turn depends on
+DDAPI applications depend on `liballjoyn_ddapi.so`, which in turn depends on
 `liballjoyn.so` and `liballjoyn_about.so`. You'll need to include the location
 where you installed these libraries in the `LD_LIBRARY_PATH` environment
 variable. For example:
@@ -144,6 +144,6 @@ generated header files (based on your data model) are found.
 After the compilation step of your application (make sure to also compile
 the generated code), you should link your application to
 
-* libajdd.so
+* liballjoyn_ddapi.so
 * liballjoyn_about.so
 * liballjoyn.so

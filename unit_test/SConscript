@@ -18,7 +18,7 @@ import os
 Import('env')
 
 if not os.environ.get('GTEST_DIR'):
-    print('GTEST_DIR not specified skipping ajdd unit test build')
+    print('GTEST_DIR not specified skipping Data-driven API unit test build')
 else:
     env['GTEST_DIR'] = os.environ['GTEST_DIR']
     gtest_env = env.Clone();
@@ -57,7 +57,7 @@ else:
     unittest_env.Append(LIBPATH =  '$DD_DISTDIR/lib')
     unittest_env.Append(LIBPATH = ['.'])
     unittest_env.Prepend(LIBS = ['gtest'])
-    unittest_env.Prepend(LIBS = ['ajdd'])
+    unittest_env.Prepend(LIBS = ['alljoyn_ddapi'])
 
     unittest_env.Append(CPPPATH = ['generated'])
 
