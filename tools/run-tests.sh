@@ -83,8 +83,10 @@ for dir in $(ls "${SYSTEST_ROOT}"); do
     fi
 done
 
-echo "[[ Running hybrid test ]]"
-RUNTEST=1 "${PLATFORM_ROOT}"/dist/datadriven_cpp/bin/samples/hybriddoor_cons_prov home office school || exit 1
+if [ -x "${PLATFORM_ROOT}"/dist/datadriven_cpp/bin/samples/hybriddoor_cons_prov ]; then
+    echo "[[ Running hybrid test ]]"
+    RUNTEST=1 "${PLATFORM_ROOT}"/dist/datadriven_cpp/bin/samples/hybriddoor_cons_prov home office school || exit 1
+fi
 
 
 # generate coverage report (lcov 1.10 or better required for --no-external)

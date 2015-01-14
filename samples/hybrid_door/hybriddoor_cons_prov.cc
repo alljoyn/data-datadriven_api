@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <iostream>
 #include <vector>
-#include <semaphore.h>
+#include <datadriven/Semaphore.h>
 #include <memory>
 #include <stdlib.h>
 #include <pthread.h>
@@ -402,7 +402,7 @@ static int StartAlljoynApplication()
 /**************************************************************/
 /*          CONSUMER START                                    */
 /*************************************************************/
-static sem_t namechanged;
+static datadriven::Semaphore namechanged;
 static char name[128];
 
 class SignalListeningObject :
@@ -452,7 +452,7 @@ class SignalListeningObject :
         printf("--==## signalConsumer: Name Changed signal Received ##==--\n");
         printf("\tNew name: '%s'.\n", msg->GetArg(0)->v_string.str);
         strcpy(name, msg->GetArg(0)->v_string.str);
-        sem_post(&namechanged);
+        namechanged.Post();
     }
 
   private:
@@ -646,8 +646,8 @@ static QStatus ConsumerInit()
     return status;
 }
 
-static sem_t onupdate;
-static sem_t onremove;
+static datadriven::Semaphore onupdate;
+static datadriven::Semaphore onremove;
 /**************************************************************/
 /*          CONSUMER END                                    */
 /*************************************************************/
@@ -664,7 +664,7 @@ class MyDoorListener :
              << ", code = " << door->GetKeyCode()->GetReply().KeyCode << "." << endl;
         cout << "> ";
         cout.flush();
-        sem_post(&onupdate);
+        onupdate.Post();
     }
 
     void OnRemove(const shared_ptr<DoorProxy>& door)
@@ -676,11 +676,11 @@ class MyDoorListener :
              << prop.Location.c_str() << " does no longer exist." << endl;
         cout << "> ";
         cout.flush();
-        sem_post(&onremove);
+        onremove.Post();
     }
 };
 
-static sem_t onsignal;
+static datadriven::Semaphore onsignal;
 static qcc::String lastPerson;
 
 class MyDoorSignalListener :
@@ -696,43 +696,19 @@ class MyDoorSignalListener :
         cout << "> ";
         cout.flush();
         lastPerson = signal.name;
-        sem_post(&onsignal);
+        onsignal.Post();
     }
 };
 
-static bool init_test()
-{
-    if (sem_init(&onsignal, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
-        return false;
-    }
-    if (sem_init(&onupdate, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
-        return false;
-    }
-    if (sem_init(&onremove, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
-        return false;
-    }
-    if (sem_init(&namechanged, 0, 0) != 0) {
-        cerr << "FAIL: Could not init semaphore " << strerror(errno) << endl;
-        return false;
-    }
-
-    return true;
-}
-
 static int run_test(datadriven::Observer<DoorProxy>& observer)
 {
-    int ret;
-    struct timespec twosec;
-    twosec.tv_sec = time(NULL) + 5;
-    twosec.tv_nsec = 0;
+    QStatus ret;
+    uint32_t twosec = 5000;
 
     /* --------- DDAPI ----------- */
     for (size_t i = 0; i < g_doors.size(); ++i) {
-        ret = sem_timedwait(&onupdate, &twosec);
-        if (ret != 0) {
+        ret = onupdate.TimedWait(twosec);
+        if (ret != ER_OK) {
             cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
             cerr << "FAIL: Did not see all doors " << endl;
             return EXIT_FAILURE;
@@ -741,8 +717,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
 
     //emit signal
     g_doors[0]->PersonPassedThrough("alice");
-    ret = sem_timedwait(&onsignal, &twosec);
-    if (ret != 0) {
+    ret = onsignal.TimedWait(twosec);
+    if (ret != ER_OK) {
         cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
         cerr << "FAIL: Did not see signal " << endl;
         return EXIT_FAILURE;
@@ -779,8 +755,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     }
 
     for (size_t i = 0; i < g_doors.size(); ++i) {
-        ret = sem_timedwait(&onremove, &twosec);
-        if (ret != 0) {
+        ret = onremove.TimedWait(twosec);
+        if (ret != ER_OK) {
             cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
             cerr << "FAIL: Did not see all doors removed " << endl;
             return EXIT_FAILURE;
@@ -794,8 +770,8 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
     }
 
     bso->EmitNameChangedSignal("mynewname");
-    ret = sem_timedwait(&namechanged, &twosec);
-    if (ret != 0) {
+    ret = namechanged.TimedWait(twosec);
+    if (ret != ER_OK) {
         cerr << "FAIL: sem_timedwait() failed: " << strerror(errno) << endl;
         cerr << "FAIL: Did not see AJN signal " << endl;
         return EXIT_FAILURE;
@@ -812,7 +788,6 @@ static int run_test(datadriven::Observer<DoorProxy>& observer)
 
 int main(int argc, char** argv)
 {
-    init_test();
     int retval = EXIT_FAILURE;
     bus = CommonSampleUtil::prepareBusAttachment();
     if (bus == NULL) {
@@ -922,7 +897,7 @@ int main(int argc, char** argv)
 
         case 'r': {
                 Door& d = *g_doors[g_turn];
-                if (datadriven::ProvidedObject::REGISTERED == d.GetState()) {
+                if (datadriven::ProvidedObject::ST_REGISTERED == d.GetState()) {
                     d.RemoveFromBus();
                 } else if (ER_OK != d.UpdateAll()) {
                     cerr << "Failed to completely remove door !" << endl;

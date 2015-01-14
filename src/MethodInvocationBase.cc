@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -61,7 +61,15 @@ MethodInvocationBase::MethodInvocationBase() :
 MethodInvocationBase::~MethodInvocationBase()
 {
     if (nullptr != sem) {
-        delete sem;
+        // Note: We cannot cancel started async method calls in Alljoyn, so we can
+        //       still get OnReplyMessage calls during destruction of MethodInvocationBase.
+        //       Putting the semaphore to null before deleting it reduces the chance of
+        //       getting core dumps when Alljoyn calls back to this object.
+        //       But there is still a race condition here, in which a reply message is using
+        //       the sem member variable while we are deleting it.
+        Semaphore* tmp = sem;
+        sem = nullptr;
+        delete tmp;
     }
     weak_this.reset();
 }

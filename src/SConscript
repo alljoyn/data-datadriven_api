@@ -18,7 +18,13 @@ libenv = env.Clone()
 
 srcs = Glob('*.cc')
 srcs.append(Glob('common/*.cc'))
-srcs.append(Glob('common/os/posix/*.cc'))
+
+# Platform specifics for common
+if env['OS_GROUP'] == 'windows':
+    srcs.append(Glob('common/os/windows/*.cc'))
+else:
+    srcs.append(Glob('common/os/posix/*.cc'))
+
 
 libs = []
 

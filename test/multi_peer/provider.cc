@@ -33,12 +33,11 @@ class Provider::MultiPeerObject :
         this->id = num;
     }
 
-    void RequestEmitNum(int32_t num, std::shared_ptr<RequestEmitNumReply> _reply)
+    void RequestEmitNum(int32_t num)
     {
         cout << "Provider " << provId << " got request for signal emit with number "
              << num << " on object with id " << id << endl;
         EmitNum(num);
-        _reply->Send();
     }
 
   private:
@@ -52,10 +51,11 @@ Provider::Provider(int provId,
     assert(nullptr != advertiser);
     for (int i = 0; i < numObj; i++) {
         int obj_id = (provId * numObj) + i;
-        objects.push_back(new MultiPeerObject(advertiser, obj_id, provId));
+        MultiPeerObject* o = new MultiPeerObject(advertiser, obj_id, provId);
+        objects.push_back(o);
         /* signal existence of object */
         cout << "Provider " << provId << " announces object " << i
-             << " with id " << obj_id << endl;
+             << " with id " << obj_id << " and path " << o->GetPath() << endl;
         assert(ER_OK == objects[i]->UpdateAll());
         assert(ER_OK == objects[i]->GetStatus());
     }

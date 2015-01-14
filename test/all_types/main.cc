@@ -235,12 +235,24 @@ class AllDictionariesSignalListener :
  *       -# validate object properties
  */
 class NoArgsSignalListener :
-    public datadriven::SignalListener<AllTypesProxy, AllTypesProxy::SignalWithoutArgs> {
+    public datadriven::SignalListener<AllTypesProxy, AllTypesProxy::SignalWithoutArgs>,
+    public datadriven::SignalListener<AllTypesProxy, AllTypesProxy::SignalMultipleInheritance> {
     void OnSignal(const AllTypesProxy::SignalWithoutArgs& signal)
     {
         const std::shared_ptr<AllTypesProxy> atp = signal.GetEmitter();
 
         cout << "Consumer received no-args signal from " << atp->GetObjectId() << endl;
+        dump("Consumer OnNoArgsSignal properties ", atp->GetProperties());
+        validate(atp->GetProperties(), _num_elements);
+        assert(ER_OK == _semAllTypes.Post());
+        cout << "Consumer validated signal" << endl;
+    }
+
+    void OnSignal(const AllTypesProxy::SignalMultipleInheritance& signal)
+    {
+        const std::shared_ptr<AllTypesProxy> atp = signal.GetEmitter();
+
+        cout << "Consumer received multiple inheritance signal from " << atp->GetObjectId() << endl;
         dump("Consumer OnNoArgsSignal properties ", atp->GetProperties());
         validate(atp->GetProperties(), _num_elements);
         assert(ER_OK == _semAllTypes.Post());
@@ -443,6 +455,7 @@ static void call_method_no_out(const shared_ptr<AllTypesProxy>& proxy)
     cout << "Consumer validated no out args reply" << endl;
     cout << "Consumer waiting for signal" << endl;
     assert(ER_OK == _semAllTypes.Wait());
+    assert(ER_OK == _semAllTypes.Wait());
     cout << "Consumer done waiting for signal" << endl;
 }
 
@@ -502,7 +515,11 @@ static int be_consumer(void)
     cout << "Consumer registering listeners" << endl;
 
     observer_at->AddSignalListener(atsl);
-    observer_at->AddSignalListener(nasl);
+    observer_at->AddSignalListener(*(dynamic_cast<datadriven::SignalListener<AllTypesProxy,
+                                                                             AllTypesProxy::SignalMultipleInheritance>*>(
+                                         &nasl)));
+    observer_at->AddSignalListener(*(dynamic_cast<datadriven::SignalListener<AllTypesProxy,
+                                                                             AllTypesProxy::SignalWithoutArgs>*>(&nasl)));
     observer_aa->AddSignalListener(aasl);
     observer_ad->AddSignalListener(adsl);
     // wait for object update (3 interfaces)

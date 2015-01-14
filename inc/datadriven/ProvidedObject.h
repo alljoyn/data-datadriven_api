@@ -79,10 +79,10 @@ class ProvidedObject  {
      * Set of states that the ProvidedObject can take during its life cycle.
      */
     enum State {
-        CONSTRUCTED, /**< Initial state of the object life cycle, the object has never been exposed on the AllJoyn bus. */
-        REGISTERED, /**< The object is exposed on the AllJoyn bus. */
-        REMOVED, /**< The object is removed from the AllJoyn bus. */
-        ERROR /**< The object is in an error state and cannot be exposed on the AllJoyn bus. */
+        ST_CONSTRUCTED, /**< Initial state of the object life cycle, the object has never been exposed on the AllJoyn bus. */
+        ST_REGISTERED, /**< The object is exposed on the AllJoyn bus. */
+        ST_REMOVED, /**< The object is removed from the AllJoyn bus. */
+        ST_ERROR /**< The object is in an error state and cannot be exposed on the AllJoyn bus. */
     };
 
   public:

@@ -21,6 +21,7 @@ Copyright (c) 2014, AllSeen Alliance. All rights reserved.
         <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
     <method name="RequestEmitNum">
+        <annotation name="org.freedesktop.DBus.Method.NoReply" value="true"/>
         <arg name="num" type="i" direction="in" />
     </method>
     <signal name="EmitNum">

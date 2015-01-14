@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -101,7 +101,8 @@ QStatus ObserverBase::SetRefCountedPtr(std::weak_ptr<ObserverBase> observer)
 {
     observerBase = observer;
     qcc::String ifName = registeredTypeDesc->GetDescription().GetName();
-    return observerMgr->RegisterObserver(observerBase, ifName);
+    status = observerMgr->RegisterObserver(observerBase, ifName);
+    return status;
 }
 
 size_t ObserverBase::Size()

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,8 @@ using namespace datadriven;
 using namespace qcc;
 
 SessionManager::SessionManager(BusAttachment& ba) :
-    errorStatus(ER_FAIL),
+    errorStatus(ER_INIT_FAILED),
+    shuttingDown(false),
     async(this, true),
     clientBusAttachment(ba),
     pingListener(new AutoPingListener(this))
@@ -55,33 +56,37 @@ SessionManager::SessionManager(BusAttachment& ba) :
 
 SessionManager::~SessionManager()
 {
-    mutex.Lock(__func__, __LINE__);
-    // TODO: Remove this when self-join is completed
-    // Reset all session handlers for open sessions to prevent crash in BusAttachement
+    mutex.Lock(__FUNCTION__, __LINE__);
+    // Set flag to indicate "shutting down" to prevent handling of new incomming session events (new/lost)
+    shuttingDown = true;
+
     for (SessionVector::const_iterator it = sessions.begin(); it != sessions.end(); ++it) {
+        // Cleanup sessions listeners
         clientBusAttachment.SetSessionListener((*it).GetId(), NULL);
     }
-    mutex.Unlock(__func__, __LINE__);
-
+    mutex.Unlock(__FUNCTION__, __LINE__);
     async.Stop();
 }
 
 QStatus SessionManager::GetStatus() const
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     QStatus ret = errorStatus;
-    mutex.Unlock(__func__, __LINE__);
+    if (shuttingDown) {
+        ret = ER_FAIL;
+    }
+    mutex.Unlock(__FUNCTION__, __LINE__);
     return ret;
 }
 
 bool SessionManager::IsSessionEstablished(const qcc::String& uniqueBusName,
                                           const ajn::SessionPort port) const
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     SessionVector::const_iterator it = std::search_n(sessions.begin(), sessions.end(), 1,
                                                      Session(uniqueBusName, port), SessionManager::SessionComp);
     bool sessionEstablished = (it != sessions.end()) && (*it).IsEstablished();
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
     return sessionEstablished;
 }
 
@@ -91,10 +96,14 @@ bool SessionManager::GetSessionId(const qcc::String& uniqueBusName,
 {
     bool sessionEstablished = false;
 
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     do {
         if (ER_OK != errorStatus) {
             QCC_LogError(errorStatus, ("Session manager not properly initialized"));
+            break;
+        }
+        if (shuttingDown) {
+            QCC_LogError(ER_FAIL, ("Session manager is shutting down"));
             break;
         }
 
@@ -130,47 +139,52 @@ bool SessionManager::GetSessionId(const qcc::String& uniqueBusName,
             }
         }
     } while (0);
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
 
     return sessionEstablished;
 }
 
 void SessionManager::ReleaseSessionId(ajn::SessionId& sessionId)
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     SessionVector::iterator sessionIt = std::search_n(sessions.begin(), sessions.end(), 1,
                                                       Session(sessionId), SessionIdComp);
     if (sessions.end() != sessionIt) {
         // Decrement refcount
         if (0 == (*sessionIt).Decrement()) {
+            async.Enqueue(new LeaveSessionData((*sessionIt).GetId()));
             qcc::String busName = (*sessionIt).GetBusName();
             pingManager->RemoveDestination(PING_GROUP, busName);
             sessions.erase(sessionIt);
         }
     }
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
 }
 
 void SessionManager::RegisterListener(SessionManager::Listener* listener)
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     if (ER_OK != errorStatus) {
         QCC_LogError(errorStatus, ("Session manager not properly initialized"));
+    } else if (shuttingDown) {
+        QCC_LogError(ER_FAIL, ("Session manager is shutting down"));
     } else {
         sessionListeners.insert(listener);
     }
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
 }
 
 void SessionManager::UnregisterListener(SessionManager::Listener* listener)
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     if (ER_OK != errorStatus) {
         QCC_LogError(errorStatus, ("Session manager not properly initialized"));
+    } else if (shuttingDown) {
+        QCC_LogError(ER_FAIL, ("Session manager is shutting down"));
     } else {
         sessionListeners.erase(listener);
     }
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
 }
 
 void SessionManager::JoinSessionCB(QStatus status, SessionId id,
@@ -179,13 +193,16 @@ void SessionManager::JoinSessionCB(QStatus status, SessionId id,
 {
     Session* session = static_cast<Session*>(context);
 
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     do {
         if (ER_OK != errorStatus) {
             QCC_LogError(errorStatus, ("Session manager not properly initialized"));
             break;
         }
-
+        if (shuttingDown) {
+            QCC_LogError(ER_FAIL, ("Session manager is shutting down"));
+            break;
+        }
         if (ER_OK != status) {
             QCC_LogError(status, ("Session could not be joined"));
             break;
@@ -202,19 +219,22 @@ void SessionManager::JoinSessionCB(QStatus status, SessionId id,
             (*it)->OnSessionEstablished(*session, id);
         }
     } while (0);
-    mutex.Unlock(__func__, __LINE__);
-
+    mutex.Unlock(__FUNCTION__, __LINE__);
     delete session;
 }
 
 void SessionManager::SessionLost(ajn::SessionId sessionId, SessionLostReason reason)
 {
-    mutex.Lock(__func__, __LINE__);
+    mutex.Lock(__FUNCTION__, __LINE__);
     do {
         QCC_DbgPrintf(("Lost session %lu", (unsigned long)sessionId));
 
         if (ER_OK != errorStatus) {
             QCC_LogError(errorStatus, ("Session manager not properly initialized"));
+            break;
+        }
+        if (shuttingDown) {
+            QCC_LogError(ER_FAIL, ("Session manager is shutting down"));
             break;
         }
 
@@ -233,7 +253,7 @@ void SessionManager::SessionLost(ajn::SessionId sessionId, SessionLostReason rea
         (*sessionIt).Established(false);
         (*sessionIt).SetId(0);
     } while (0);
-    mutex.Unlock(__func__, __LINE__);
+    mutex.Unlock(__FUNCTION__, __LINE__);
 }
 
 bool SessionManager::BusNameComp(Session left, Session right)
@@ -280,11 +300,11 @@ void SessionManager::AutoPingListener::DestinationFound(const qcc::String& group
     QCC_DbgHLPrintf(("Destination found '%s'", destination.c_str()));
 
     if ((NULL == sessionMgr) || ER_OK != (sessionMgr->GetStatus())) {
-        QCC_LogError(ER_FAIL, ("Session manager not properly initialized"));
+        QCC_LogError(ER_FAIL, ("Session manager not properly initialized or is shutting down"));
         return;
     }
 
-    sessionMgr->mutex.Lock(__func__, __LINE__);
+    sessionMgr->mutex.Lock(__FUNCTION__, __LINE__);
 
     // Set session parameters and join it
     for (SessionManager::SessionVector::iterator itSession = sessionMgr->sessions.begin();
@@ -300,7 +320,7 @@ void SessionManager::AutoPingListener::DestinationFound(const qcc::String& group
         }
     }
 
-    sessionMgr->mutex.Unlock(__func__, __LINE__);
+    sessionMgr->mutex.Unlock(__FUNCTION__, __LINE__);
 }
 
 void SessionManager::AutoPingListener::DestinationLost(const qcc::String& group,
@@ -309,11 +329,11 @@ void SessionManager::AutoPingListener::DestinationLost(const qcc::String& group,
     QCC_DbgHLPrintf(("Destination lost '%s'", destination.c_str()));
 
     if ((NULL == sessionMgr) || ER_OK != (sessionMgr->GetStatus())) {
-        QCC_LogError(ER_FAIL, ("Session manager not properly initialized"));
+        QCC_LogError(ER_FAIL, ("Session manager not properly initialized or is shutting down"));
         return;
     }
 
-    sessionMgr->mutex.Lock(__func__, __LINE__);
+    sessionMgr->mutex.Lock(__FUNCTION__, __LINE__);
 
     for (SessionManager::SessionVector::iterator itSession = sessionMgr->sessions.begin();
          itSession != sessionMgr->sessions.end(); itSession++) {
@@ -332,5 +352,5 @@ void SessionManager::AutoPingListener::DestinationLost(const qcc::String& group,
         }
     }
 
-    sessionMgr->mutex.Unlock(__func__, __LINE__);
+    sessionMgr->mutex.Unlock(__FUNCTION__, __LINE__);
 }

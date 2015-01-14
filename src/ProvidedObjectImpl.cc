@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 #include <datadriven/ProvidedInterface.h>
-#include <datadriven/ProvidedObject.h>
 
 #include <algorithm>
 
@@ -63,7 +62,7 @@ class ProvidedObjectImpl::MethodHandlerTask :
 ProvidedObjectImpl::ProvidedObjectImpl(std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl,
                                        const qcc::String& path,
                                        ProvidedObject& obj) :
-    BusObject(path.c_str()), objectAdvertiserImpl(objectAdvertiserImpl), state(ProvidedObjectImpl::CONSTRUCTED),
+    BusObject(path.c_str()), objectAdvertiserImpl(objectAdvertiserImpl), state(ProvidedObject::ST_CONSTRUCTED),
     providedObject(obj)
 {
 }
@@ -71,7 +70,7 @@ ProvidedObjectImpl::ProvidedObjectImpl(std::weak_ptr<ObjectAdvertiserImpl> objec
 ProvidedObjectImpl::ProvidedObjectImpl(std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl,
                                        ProvidedObject& obj) :
     BusObject(GeneratePath().c_str()), objectAdvertiserImpl(objectAdvertiserImpl),
-    state(ProvidedObjectImpl::CONSTRUCTED), providedObject(obj)
+    state(ProvidedObject::ST_CONSTRUCTED), providedObject(obj)
 {
 }
 
@@ -89,16 +88,16 @@ qcc::String ProvidedObjectImpl::GeneratePath()
 QStatus ProvidedObjectImpl::Register()
 {
     QStatus result = ER_FAIL;
-    if (ProvidedObjectImpl::REGISTERED != state) {
+    if (ProvidedObject::ST_REGISTERED != state) {
         std::shared_ptr<ObjectAdvertiserImpl> advertiser = objectAdvertiserImpl.lock();
         if (advertiser) {
             result = advertiser->AddProvidedObject(self);
 
             if (ER_OK == result) {
-                state = ProvidedObjectImpl::REGISTERED;
+                state = ProvidedObject::ST_REGISTERED;
                 result = ER_OK;
             } else {
-                state = ProvidedObjectImpl::ERROR;
+                state = ProvidedObject::ST_ERROR;
                 QCC_LogError(ER_FAIL, ("Could not register object on the bus"));
             }
         }
@@ -140,16 +139,16 @@ void ProvidedObjectImpl::CallMethodHandler(ajn::MessageReceiver::MethodHandler h
 
 void ProvidedObjectImpl::RemoveFromBus()
 {
-    if (state == ProvidedObjectImpl::REGISTERED) {
+    if (state == ProvidedObject::ST_REGISTERED) {
         std::shared_ptr<ObjectAdvertiserImpl> advertiser = objectAdvertiserImpl.lock();
         if (advertiser) {
             advertiser->RemoveProvidedObject(self);
         }
-        state = ProvidedObjectImpl::REMOVED;
+        state = ProvidedObject::ST_REMOVED;
     }
 }
 
-ProvidedObjectImpl::State ProvidedObjectImpl::GetState()
+ProvidedObject::State ProvidedObjectImpl::GetState()
 {
     return state;
 }
@@ -159,7 +158,7 @@ QStatus ProvidedObjectImpl::EmitSignal(const ajn::InterfaceDescription::Member& 
                                        size_t numArgs)
 {
     QStatus status = ER_FAIL;
-    if (ProvidedObjectImpl::REGISTERED != state) {
+    if (ProvidedObject::ST_REGISTERED != state) {
         /* Actually BusObject::Signal() should return a proper error message, but it does not.
          * After two failed attempts to fix this at BusObject level
          * (1st attempt: by setting isRegistered as a check in BusObject::Signal() --> lead to race condition

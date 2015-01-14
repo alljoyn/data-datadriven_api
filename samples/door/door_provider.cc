@@ -242,7 +242,7 @@ int main(int argc, char** argv)
 
         case 'r': {
                 Door& d = *g_doors[g_turn];
-                if (datadriven::ProvidedObject::REGISTERED == d.GetState()) {
+                if (datadriven::ProvidedObject::ST_REGISTERED == d.GetState()) {
                     d.RemoveFromBus();
                 } else if (ER_OK != d.UpdateAll()) {
                     cerr << "Failed to completely remove door !" << endl;

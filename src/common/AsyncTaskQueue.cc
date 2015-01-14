@@ -82,7 +82,11 @@ void AsyncTaskQueue::Stop()
 #ifdef _WIN32
     EnterCriticalSection(&m_Lock);
     while (!m_MessageQueue.empty()) {
+        TaskData const* taskData = m_MessageQueue.front();
         m_MessageQueue.pop();
+        if (m_ownersheap) {
+            delete taskData;
+        }
     }
     m_IsStopping = true;
     WakeConditionVariable(&m_QueueChanged);
@@ -93,7 +97,11 @@ void AsyncTaskQueue::Stop()
 #else
     pthread_mutex_lock(&m_Lock);
     while (!m_MessageQueue.empty()) {
+        TaskData const* taskData = m_MessageQueue.front();
         m_MessageQueue.pop();
+        if (m_ownersheap) {
+            delete taskData;
+        }
     }
     m_IsStopping = true;
     pthread_cond_signal(&m_QueueChanged);

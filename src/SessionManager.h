@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -251,6 +251,11 @@ class SessionManager :
      * The status of the session manager.
      */
     QStatus errorStatus;
+
+    /**
+     * Indicate if the session manager is shutting down.
+     */
+    bool shuttingDown;
 
     /**
      * An asynchronous task queue that runs tasks on behalf of the session manager or one of its users.

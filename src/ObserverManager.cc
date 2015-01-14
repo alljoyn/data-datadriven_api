@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -202,8 +202,7 @@ QStatus ObserverManager::RegisterObserver(std::weak_ptr<ObserverBase> observer,
                 QCC_LogError(status, ("Failed to register announce handler"));
                 break;
             }
-            cache = std::shared_ptr<ObserverCache>(new ObserverCache(ifName));
-            cache->SetAllocator(observer);
+            cache = std::shared_ptr<ObserverCache>(new ObserverCache(ifName, observer));
             caches[ifName] = cache;
             newCache = true;
         } else {

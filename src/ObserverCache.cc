@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,8 +27,9 @@
 
 namespace datadriven {
 // PUBLIC //
-ObserverCache::ObserverCache(const qcc::String ifName) :
-    ifName(ifName)
+ObserverCache::ObserverCache(const qcc::String ifName,
+                             std::weak_ptr<ObjectAllocator> alloc) :
+    ifName(ifName), allocator(alloc)
 {
 }
 
@@ -103,11 +104,6 @@ void ObserverCache::NotifyObjectExistence(std::shared_ptr<ProxyInterface> proxyO
     }
 }
 
-void ObserverCache::SetAllocator(std::weak_ptr<ObjectAllocator> alloc)
-{
-    allocator = alloc;
-}
-
 ObserverCache::NotificationSet ObserverCache::AddObject(const ObjectId& objId)
 {
     std::shared_ptr<ProxyInterface> proxyObj;
@@ -168,22 +164,21 @@ ObserverCache::NotificationSet ObserverCache::RemoveObject(const ObjectId& objId
 
     mutex.Lock();
     ObjectIdToSharedPtrMap::iterator it = livingObjects.find(objId);
-    assert(it != livingObjects.end());
+    NotificationSet snapshot = { nullptr, GetObservers() };
+    if (it != livingObjects.end()) {
+        std::weak_ptr<ProxyInterface> weak(it->second);
+        std::shared_ptr<ProxyInterface> proxyObj = it->second;
+        it->second->SetAlive(false);
 
-    std::weak_ptr<ProxyInterface> weak(it->second);
-    std::shared_ptr<ProxyInterface> proxyObj = it->second;
-    it->second->SetAlive(false);
+        livingObjects.erase(it);
+        deadObjects.insert(std::pair<ObjectId, std::weak_ptr<ProxyInterface> >(objId, weak));
+        snapshot.interface = proxyObj;
 
-    livingObjects.erase(it);
-    deadObjects.insert(std::pair<ObjectId, std::weak_ptr<ProxyInterface> >(objId, weak));
-
-    NotificationSet snapshot = { proxyObj, GetObservers() };
+        QCC_DbgPrintf(("Remove object @%s, path = '%s', session = %lu",
+                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+    }
     mutex.Unlock();
-
-    QCC_DbgPrintf(("Remove object @%s, path = '%s', session = %lu",
-                   objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
     GarbageCollect();         /* TODO: not always trigger this */
-
     return snapshot;
 }
 

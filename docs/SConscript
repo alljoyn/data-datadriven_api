@@ -1,4 +1,4 @@
-# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011, 2013, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -11,24 +11,26 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+import os
 
 Import('env')
+Import('headers')
 
-appenv = env.Clone()
-appenv.Append(CPPPATH = ['generated'])
-appenv.Prepend(LIBS = ['alljoyn_ddapi'])
+docenv = env.Clone()
+docenv['ENV']['DD_DISTDIR'] = str(docenv.Dir('$DD_DISTDIR'))
 
-# Use bundled router?
-if appenv['BR'] == 'on':
-    appenv.Append(LIBPATH = ['$ALLJOYN_DISTDIR' + '/cpp/lib'])
-    brobj = appenv.File('$ALLJOYN_DISTDIR' + '/cpp/lib/BundledRouter.o')
-    appenv.Prepend(LIBS = [brobj, 'ajrouter'])
+installedDocs = None
 
-samples = []
+# Build docs
+if docenv['DOCS'] == 'html':
+    installedDocs = docenv.Doxygen(source='Doxygen_html')
 
-for sample in appenv.Glob('*'):
-    if sample.srcnode().isdir():
-        apps = env.SConscript(sample.name + '/SConscript', exports={'env':appenv})
-        samples.append(apps)
+if installedDocs:
+    docenv.Depends(installedDocs, headers);
 
-Return('samples')
+# Build Alias to make cleaning, building and rebuilding the documentation when
+# working only on the documentation simpler. This can be run by using
+# `scons ddapi_docs`
+docenv.Alias('ddapi_docs', installedDocs)

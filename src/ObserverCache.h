@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,7 +44,14 @@ class ObserverCache {
         ObserverSet observers;
     } NotificationSet;
 
-    ObserverCache(const qcc::String ifName);
+    /**
+     * ObserverCache constructor
+     *
+     * \param ifName name of the interface
+     * \param allocator the allocator to be installed
+     */
+    ObserverCache(const qcc::String ifName,
+                  std::weak_ptr<ObjectAllocator> alloc);
 
     ~ObserverCache();
 
@@ -69,13 +76,6 @@ class ObserverCache {
      * \param observer the observer to be notified
      */
     void NotifyObserver(std::weak_ptr<ObserverBase> observer);
-
-    /**
-     * Install the allocator for objects of this cache
-     *
-     * \param allocator the allocator to be installed
-     */
-    void SetAllocator(std::weak_ptr<ObjectAllocator> allocator);
 
     /**
      * Add a new object identified by \a objId to the cache using \a allocator

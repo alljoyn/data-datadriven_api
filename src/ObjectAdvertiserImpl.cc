@@ -190,7 +190,7 @@ QStatus ObjectAdvertiserImpl::AboutUpdate(const std::shared_ptr<BusObject> busOb
     QStatus status = ER_FAIL;
     AboutServiceApi* about = nullptr;
 
-    aboutMutex.Lock(__func__, __LINE__);
+    aboutMutex.Lock(__FUNCTION__, __LINE__);
     about = AboutServiceApi::getInstance();
     if (add) {
         status = about->AddObjectDescription(busObject->GetPath(), interfaceNames);
@@ -206,7 +206,7 @@ QStatus ObjectAdvertiserImpl::AboutUpdate(const std::shared_ptr<BusObject> busOb
             QCC_LogError(status, ("Failed to announce registered objects"));
         }
     }
-    aboutMutex.Unlock(__func__, __LINE__);
+    aboutMutex.Unlock(__FUNCTION__, __LINE__);
     return status;
 }
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -203,6 +203,7 @@ TEST_F(SessionManagerTest, SetupSession) {
     EXPECT_TRUE(listener.Exists(busName, port));
     EXPECT_FALSE(sessionMgr.IsSessionEstablished(busName, port + 1));
     EXPECT_FALSE(sessionMgr.GetSessionId(busName, port + 1, sessionId));
+    sessionMgr.UnregisterListener(&listener);
 }
 
 /**
@@ -238,6 +239,7 @@ TEST_F(SessionManagerTest, SessionRefCounting) {
     EXPECT_TRUE(sessionMgr.IsSessionEstablished(busName, port));
     sessionMgr.ReleaseSessionId(sessionId); // refcount = 0
     EXPECT_FALSE(sessionMgr.IsSessionEstablished(busName, port));
+    sessionMgr.UnregisterListener(&listener);
 }
 
 /**
@@ -282,6 +284,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionSamePeer) {
         EXPECT_EQ(0u, sessionId);
         EXPECT_FALSE(listener.Exists(busName, port));
     }
+    sessionMgr.UnregisterListener(&listener);
 }
 
 /**
@@ -330,6 +333,7 @@ TEST_F(SessionManagerTest, SetupMultipleSessionDifferentPeers) {
         EXPECT_EQ(0u, sessionId);
         EXPECT_FALSE(listener.Exists(busName.c_str(), port));
     }
+    sessionMgr.UnregisterListener(&listener);
 }
 
 /**

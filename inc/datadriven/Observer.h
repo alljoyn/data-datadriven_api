@@ -420,7 +420,7 @@ template <typename T> class Observer :
      * \param[in] bus The (optional) AllJoyn BusAttachment to be used for interactions with the bus.  If
      *                not provided one will be created.
      */
-    Observer(Observer::Listener* listener,
+    Observer(typename Observer<T>::Listener* listener,
              ajn::BusAttachment* bus = nullptr) :
         ObserverBase(T::Type::GetInstance(), bus),
         interfaceListener(listener)
@@ -484,7 +484,7 @@ template <typename T> class Observer :
         }
     }
 
-    Observer::Listener* interfaceListener;
+    typename Observer<T>::Listener * interfaceListener;
 };
 }
 

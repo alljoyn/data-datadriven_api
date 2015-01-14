@@ -16,6 +16,13 @@
 
 #if defined(QCC_OS_DARWIN)
 #include <sys/time.h>
+#elif defined(QCC_OS_GROUP_WINDOWS)
+#include <windows.h>
+#include <inttypes.h>
+typedef struct timespec {
+    int64_t tv_sec;
+    int64_t tv_nsec;
+} timespec;
 #endif
 
 #include <datadriven/Semaphore.h>
@@ -70,6 +77,21 @@ static ts Now()
     struct timeval tv;
     gettimeofday(&tv, NULL);
     TIMEVAL_TO_TIMESPEC(&tv, &now);
+#elif defined(QCC_OS_GROUP_WINDOWS)
+    FILETIME ft;
+    ULARGE_INTEGER tmp;
+    // 100-nanosecond intervals since January 1, 1601
+    GetSystemTimeAsFileTime(&ft);
+
+    // convert to 64-bit value
+    tmp.LowPart = ft.dwLowDateTime;
+    tmp.HighPart = ft.dwHighDateTime;
+    int64_t value = tmp.QuadPart;
+
+    // Convert to epoch: Jan. 1, 1970
+    // 134774 days difference
+    now.tv_sec = value / 10000000 - 11644473600;
+    now.tv_nsec = value % 10000000;
 #else
     clock_gettime(CLOCK_REALTIME, &now);
 #endif

@@ -54,7 +54,7 @@ TEST(Destruction, FirstScenario) {
 
     ASSERT_TRUE(sto->UpdateAll() == ER_OK);
     stestObjectListener.WaitOnAllUpdates(1);
-    ASSERT_TRUE(sto->GetState() != sto->ERROR);
+    ASSERT_TRUE(sto->GetState() != sto->ST_ERROR);
 }
 
 /* *
@@ -89,7 +89,7 @@ TEST(Destruction, SecondScenario) {
     ASSERT_TRUE(sto->UpdateAll() == ER_OK);
     stestObjectListener.WaitOnAllUpdates(1);
     sto->Test(DEFAULT_TEST_NAME);
-    ASSERT_TRUE(sto->GetState() != sto->ERROR);
+    ASSERT_TRUE(sto->GetState() != sto->ST_ERROR);
     ASSERT_TRUE(obs->RemoveSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
 }
 
@@ -153,14 +153,14 @@ TEST(Destruction, ThirdScenario) {
     stestObjectListener.WaitOnAllUpdates(numOfObjects * 2 * numOfObservers);
 
     for (int i = 0; i < numOfObjects; i++) {
-        ASSERT_TRUE(tosBeforeConn[i]->GetState() != tosBeforeConn[i]->ERROR);
+        ASSERT_TRUE(tosBeforeConn[i]->GetState() != tosBeforeConn[i]->ST_ERROR);
         tosBeforeConn[i]->RemoveFromBus();
-        ASSERT_TRUE(tosBeforeConn[i]->GetState() == tosBeforeConn[i]->REMOVED);
+        ASSERT_TRUE(tosBeforeConn[i]->GetState() == tosBeforeConn[i]->ST_REMOVED);
         QCC_DbgPrintf(("Removed : %s", tosBeforeConn[i]->GetPath()));
 
-        ASSERT_TRUE(tosAfterConn[i]->GetState() != tosAfterConn[i]->ERROR);
+        ASSERT_TRUE(tosAfterConn[i]->GetState() != tosAfterConn[i]->ST_ERROR);
         tosAfterConn[i]->RemoveFromBus();
-        ASSERT_TRUE(tosAfterConn[i]->GetState() == tosAfterConn[i]->REMOVED);
+        ASSERT_TRUE(tosAfterConn[i]->GetState() == tosAfterConn[i]->ST_REMOVED);
         QCC_DbgPrintf(("Removed : %s", tosAfterConn[i]->GetPath()));
     }
 

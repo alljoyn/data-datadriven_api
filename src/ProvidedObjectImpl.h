@@ -21,38 +21,17 @@
 #include <vector>
 
 #include <alljoyn/BusObject.h>
-
 #include <datadriven/Mutex.h>
+#include <datadriven/ProvidedObject.h>
+
 #include <qcc/Debug.h>
 #define QCC_MODULE "DD_PROVIDER"
 
 namespace datadriven {
 class ObjectAdvertiserImpl;
-class ProvidedObject;   // forward
 
 class ProvidedObjectImpl :
     public ajn::BusObject {
-  public:
-    /*
-     * The life cycle of a ProvidedObject
-     *
-     *   CONSTRUCTED ---> REGISTERED <--> REMOVED
-     *         \               |            /
-     *          \              v           /
-     *           -->         ERROR      <--
-     */
-
-    /**
-     * \enum State
-     * Set of states that the ProvidedObject can take during its life cycle.
-     */
-    enum State {
-        CONSTRUCTED, /**< Initial state of the object life cycle, the object has never been exposed on the AllJoyn bus. */
-        REGISTERED, /**< The object is exposed on the AllJoyn bus. */
-        REMOVED, /**< The object is removed from the AllJoyn bus. */
-        ERROR /**< The object is in an error state and cannot be exposed on the AllJoyn bus. */
-    };
-
   public:
 
     /** Destructor */
@@ -67,7 +46,7 @@ class ProvidedObjectImpl :
      * \brief Get the current life cycle state of the object.
      * \return One of ProvidedObject::State
      */
-    ProvidedObjectImpl::State GetState();
+    ProvidedObject::State GetState();
 
     /** \private
      * Emits a signal (broadcast) across the communication layer
@@ -222,7 +201,7 @@ class ProvidedObjectImpl :
     /* unfortunately BusObject does not expose its interfaces.
      * Maybe in the future we can change this at BusObject level and then we don't need to store it ourselves.. */
     std::weak_ptr<ObjectAdvertiserImpl> objectAdvertiserImpl;
-    ProvidedObjectImpl::State state;
+    ProvidedObject::State state;
     std::weak_ptr<ProvidedObjectImpl> self; // Weak pointer that can be passed to other objects
     datadriven::Mutex mutex;
     std::vector<qcc::String> interfaceNames;

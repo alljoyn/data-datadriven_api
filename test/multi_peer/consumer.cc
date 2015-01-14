@@ -19,7 +19,7 @@
 
 #include "consumer.h"
 
-#define TIMEOUT 5000
+#define TIMEOUT 10000
 
 namespace test_system_multipeer {
 class Consumer::EmitNumListener :
@@ -112,7 +112,8 @@ void Consumer::OnUpdate(const shared_ptr<MultiPeerProxy>& mpp)
 {
     assert(ER_OK == mpp->GetStatus());
     int obj_id = mpp->GetProperties().id;
-    cout << "Consumer " << consId << " receives object with id " << obj_id << endl;
+    cout << "Consumer " << consId << " receives object with id " << obj_id
+         << " and path " << mpp->GetObjectId().GetBusObjectPath().c_str() << endl;
     assert(objects.end() == objects.find(obj_id));
     objects[obj_id] = mpp;
     assert(ER_OK == objSync.Post());
@@ -148,7 +149,7 @@ void Consumer::Test(int numLoops)
                  << " calls method on object with id "
                  << id << " and number " << num << endl;
             enl->Expect(id, num);
-            it->RequestEmitNum(num);
+            assert(ER_OK == it->RequestEmitNum(num));
             // wait for 'response' signal (the one with id == testNum)
             assert(ER_OK == enl->TimedWait(TIMEOUT));
             cnt++;

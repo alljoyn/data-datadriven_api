@@ -1,79 +1,22 @@
-# The Data-driven API for AllJoyn
+# The Data-Driven API (DDAPI) for AllJoyn
 
-## About the Data-Driven API
+## About the DDAPI
 
 The Data-driven API (DDAPI) for AllJoyn is an alternative API for the AllJoyn
 framework. It is built on top of the standard AllJoyn API and  is specifically
 tailored to use cases for the Internet of Things. Instead of the standard
 framework's service-oriented paradigm, it uses the publish/subcribe paradigm.
 
-Some conceptual knowledge of the standard AllJoyn framework is required to use the DDAPI
+Some conceptual knowledge of the standard AllJoyn framework is required to use the DDAPI.
 for application development.
 
-## The Publish/Subscribe Pattern
+## Get to Know the DDAPI
 
-Publish–subscribe (pub/sub) is a messaging pattern where creators of objects, called providers,
-do not program the objects to be observed directly by specific observers, called subscribers.
-Instead, published objects are characterized into classes, without knowledge of what,
-if any, observers there may be.
+To get to know the DDAPI, here are some sources of information:
 
-Similarly, observers express interest in one or more objects, and only observe
-those that are of interest, without knowledge of what, if any, providers there are.
+* Introduction to the DDAPI in the [learn section of the AllSeen documentation website][ddapi_intro]
 
-This pattern offers two major advantages:
-
-* Scalability: pub/sub offers more scalability.
- 
-* Loosely coupled: providers are loosely coupled to observers, and need not even
-  know of their existence. With the object interface(also called a "topic"
-  in more general pub/sub terms) being the focus, providers and observers
-  are allowed to remain ignorant of system topology.
-  Each can continue to operate normally regardless of the other.
-
-
-## The Differences Between Standard AllJoyn and the DDAPI
-
-The DDAPI distinguishes itself from the standard AllJoyn API in the
-following ways:
-
-* The DDAPI uses a pub/sub pattern instead of the service-oriented, RPC-based approach
-  of standard AllJoyn. However, it fully supports this service-oriented paradigm, and even
-  allows hybrid scenarios where DDAPI-based applications communicate with standard AllJoyn
-  applications.
-
-* The DDAPI uses a  unified approach to discovery and session setup. It enforces a single
-  mechanism for discovery and session setup. This increases interoperability
-  between devices and applications made by different vendors.
-  The main driver behind the unified discovery and session setup is the desire
-  to avoid interoperablity conflicts. Imagine a situation where you need two
-  different light control applications.
-  for your smart light bulbs just because vendor A decided to use a different 
-  session port or discovery string than vendor B.
-
-* Compared to standard AllJoyn, the DDAPI is radically simplified. The unified
-  discovery and session setup system requires virtually no API. There is only
-  one way to do things, and the DDAPI library does most of the hard
-  work for you. On top of this, the DDAPI leverages the AllJoyn Code
-  Generator to turn interface specifications (in XML format) into code that
-  deals with type registration and message marshaling and unmarshaling.
-  
-  This means that the DDAPI lets the application developer deal with the business
-  logic of the application instead of the communication logic.
-
-## Current Status
-
-The DDAPI is stable and can already be used to develop applications. Since development
-is continuously ongoing, both the code and the documentation are subject to change.
-
-## More Information
-
-The documentation for the DDAPI has not yet been integrated into the AllSeen Alliance
-documentation system, since at the time of writing of this document, that system
-is still undergoing major changes. However, we provided a number of documents that will
-get you started in application development using the DDAPI.
-
-* The TUTORIAL.md document included in the source distribution provides an easy
-  tutorial for the DDAPI.
+* Detailed API guides and tutorial in the [develop section of the AllSeen documentation website][ddapi_guide]
 
 * Using doxygen, you can build a reference manual in HTML format directly from
   the source code.
@@ -82,7 +25,49 @@ get you started in application development using the DDAPI.
 
 * [DDAPI Mailing list](https://lists.allseenalliance.org/mailman/listinfo/allseen-datadriven)
 
+## General Installation Process
 
+The general installation process for the DDAPI is as follows:
+
+1. [Download][ajdl] and [Install][ajinst] AllJoyn Core.
+2. [Install][cginst] the AllJoyn Code Generator.
+3. Unpack the DDAPI tarball in the directory where you installed the AllJoyn Core files.
+4. Go to the directory `/data/datadriven_api/` and run the scons script.
+
+Read the rest of this document for more information.
+
+## Patch When Running On Top of AllJoyn Core 14.12 (ASACORE-1238)
+
+If you are building the DDAPI on top of AllJoyn Core 14.12, you need to run a patch. This issue is solved from AllJoyn Core release 14.12a onwards.
+
+You will get this error:
+.../build/linux/x86_64/debug/dist/cpp/inc/alljoyn/AutoPinger.h:31:23: fatal error: qcc/Timer.h: No such file or directory
+compilation terminated.
+
+The patch is located in the patches directory. Run it to patch the necessary files:
+
+% patch -Np1 -i ../alljoyn-ddapi-0.0.1-src/data/datadriven_api/patches/alljoyn_core_14.12_autopinger.patch
+patching file alljoyn_core/inc/alljoyn/AutoPinger.h
+patching file alljoyn_core/src/AutoPinger.cc
+patching file alljoyn_core/src/AutoPingerInternal.cc
+patching file alljoyn_core/src/AutoPingerInternal.h
+patching file alljoyn_core/unit_test/AutoPingerTest.cc
+
+## General Installation Process
+
+The general installation process for the DDAPI is as follows:
+
+1. [Download][ajdl] and [Install][ajinst] AllJoyn Core.
+   If AllJoyn core is not installed globally on your system, set ALLJOYN_DISTDIR
+   to the path where alljoyn is compiled. For Linux 64bit this is ${ALLJOYN_SRC_DIR}/build/linux/x86_64/debug/dist/
+2. [Install][cginst] the AllJoyn Code Generator.
+   If the Code Generator is not installed globally on your system, make sure ajcodegen.py is in your PATH and
+   PYTHONPATH point to dist/lib/python in the codegen compilation.
+3. Unpack the DDAPI tarball in the directory where you installed the AllJoyn Core files.
+4. Go to the directory `/data/datadriven_api/` and run the scons script.
+
+Read the rest of this document for more information. 
+ 
 ## How to Run the Samples
 
 The samples have been compiled with a built-in router. Therefore, there is no
@@ -103,33 +88,43 @@ There are currently two sample applications to illustrate the use of the DDAPI:
 
 ## Building your own applications with the DDAPI
 
-### Requirements
+### Prerequisites
 
-Your compiler should at least support C++0x.
+Before you can use the DDAPI, the following needs to be fulfilled:
+
+* Your compiler should at least support C++0x.
+* You must make sure you [downloaded][ajdl] and [installed][ajinst] AllJoyn Core Framework.
+* You must make sure you [installed][cginst] the AllJoyn Code Generator.
 
 ### Using the Data-driven API code generator
 
-In order to use the DDAPI effectively, you need to make use of the AllJoyn code
-generator (ajcodegen.py). The code generator will create type support classes
-for each of the AllJoyn interfaces you defined in the previous step.
+The AllJoyn Code Generator is a command line driven tool which reads AllJoyn introspection XML files
+and outputs both client and server code ready for compilation and running. The Code Generator creates
+the type support classes for all interfaces you defined using the AllJoyn Introspection XML. 
+
+The code generator is located in the devtools folder. Use the SCONS script to build it.
 
 For detailed instructions on how to use the code generator, we refer you to the
-code generator's own documentation. The following should get you up and
-running though:
+[code generator's documentation][codegen].
 
-    $ ajcodegen.py -t ddcpp your_interface_definition.xml
+As a quick instruction, use the following command to convert an Introspection XML file:
+
+`$ ajcodegen.py -t ddcpp your_interface_definition.xml`
 
 For each interface specified in the XML file, 3 header files and 3 source files
-will be generated:
+are generated:
 
 * One of each for the consumer side (`<intfname>Proxy.{cc|h}`).
 * One of each for the provider side (`<intfname>Interface.{cc|h}`).
 * One of each that is common to both consumer and provider and that
   describes the interface type (`<intfname>TypeDescription.{cc|h}`).
 
-Building and linking
---------------------
-To build your own Linux application with the DDAPI, you must pass two AllJoyn-related defines:
+### Building and linking
+
+To install the DDAPI, unpack the DDAPI tarball in your AllJoyn installation folder. The
+DDAPI files are located in the `data/datadriven/` folder. Use the SCONS script to build it.
+
+To buiild your own Linux application with the DDAPI, you must pass two AllJoyn-related defines:
 
 * `QCC_OS_LINUX`
 * `QCC_OS_GROUP_POSIX`
@@ -142,8 +137,18 @@ Besides these framework include directories, you still need to make sure the
 generated header files (based on your data model) are found.
 
 After the compilation step of your application (make sure to also compile
-the generated code), you should link your application to
+the generated code), you should link your application to:
 
 * liballjoyn_ddapi.so
 * liballjoyn_about.so
 * liballjoyn.so
+
+[ddapi_intro]: https://allseenalliance.org/developers/learn/ddapi
+[ddapi-guide]: http://allseenalliance.org/developers/develop/api-guide/ddapi
+[codegen]: https://wiki.allseenalliance.org/devtools/code_generator
+
+[ajdl]: https://allseenalliance.org/developers/download
+[ajinst]: https://wiki.allseenalliance.org/develop/building_and_running
+
+[cgdl]: 
+[cginst]: https://wiki.allseenalliance.org/devtools/code_generator

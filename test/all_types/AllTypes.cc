@@ -463,6 +463,7 @@ void AllTypes::MethodWithoutOut(bool arg_in_boolean, std::shared_ptr<MethodWitho
     // also send signal without arguments
     cout << "Provider sending signal" << endl;
     SignalWithoutArgs();
+    SignalMultipleInheritance();
 }
 
 void AllTypes::MethodWithoutIn(std::shared_ptr<MethodWithoutInReply> reply)

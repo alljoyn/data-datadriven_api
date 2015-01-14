@@ -22,7 +22,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "GuidUtil.h"
-#if defined(QCC_OS_DARWIN) || defined(_WIN32)
+#if defined(QCC_OS_DARWIN)
+#include <limits.h>
+#include <CoreFoundation/CFUUID.h>
+#elif defined(_WIN32)
 #include <limits.h>
 #else
 #include <linux/limits.h>
@@ -32,7 +35,7 @@
 #pragma comment(lib, "rpcrt4.lib")
 #endif
 
-static const char DEVICE_ID_FILE_NAME[] = "alljoyn-deviceId.txt";
+//static const char DEVICE_ID_FILE_NAME[] = "alljoyn-deviceId.txt";
 
 using namespace datadriven;
 using namespace qcc;
@@ -76,6 +79,13 @@ void GuidUtil::GenerateGUIDUtil(char* strGUID)
     memcpy(strGUID, str, GUID_STRING_MAX_LENGTH + GUID_HYPHEN_MAX_LENGTH);
     strGUID[GUID_STRING_MAX_LENGTH + GUID_HYPHEN_MAX_LENGTH + 1] = 0;
     RpcStringFreeA(&str);
+#elif defined(QCC_OS_DARWIN)
+    CFUUIDRef cfUUID = CFUUIDCreate(NULL);
+    CFStringRef cfUUIDString = CFUUIDCreateString(NULL, cfUUID);
+    const int len = CFStringGetLength(cfUUIDString);
+    CFStringGetCString(cfUUIDString, strGUID, len + 1, CFStringGetSystemEncoding());
+    CFRelease(cfUUID);
+    NormalizeString(strGUID);
 #else
     std::ifstream ifs("/proc/sys/kernel/random/uuid", std::ifstream::in);
     ifs.getline(strGUID, GUID_STRING_MAX_LENGTH + GUID_HYPHEN_MAX_LENGTH + END_OF_STRING_LENGTH);

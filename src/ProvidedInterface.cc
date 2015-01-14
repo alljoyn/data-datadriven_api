@@ -67,7 +67,7 @@ QStatus ProvidedInterface::Register(ajn::BusAttachment& ba)
 
 QStatus ProvidedInterface::Update()
 {
-    if (ProvidedObjectImpl::REGISTERED != object->GetState()) {
+    if (ProvidedObject::ST_REGISTERED != object->GetState()) {
         //TODO decide on the proper course of action here.
         //     For now, we just emit a big fat warning message.
         QCC_LogError(ER_BUS_OBJECT_NOT_REGISTERED,

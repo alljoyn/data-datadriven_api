@@ -26,6 +26,9 @@ if env.has_key('_ALLJOYNCORE_'):
 else:
     from_alljoyn_core=0
 
+if not env.has_key('ALLJOYN_DISTDIR'):
+    env['ALLJOYN_DISTDIR'] = '$DISTDIR'
+
 # Indicate that this SConscript file has been loaded already
 env['_DATADRIVEN_'] = True
 
@@ -46,10 +49,16 @@ env.Append(LIBPATH = ['$DISTDIR/datadriven_cpp/lib'])
 
 ddenv = env.Clone(tools = ['textfile', codegen.tool])
 
-ddenv.Append(CCFLAGS = '-Werror')
+if env['OS_GROUP'] == 'windows':
+    ddenv.Append(CCFLAGS = '-WX')
+else:
+    ddenv.Append(CCFLAGS = '-Werror')
+
+if env['OS'] == 'darwin':
+    ddenv.Append(LINKFLAGS = ['-framework', 'CoreFoundation'])
 
 def create_libpath(self):
-    libs = map(lambda s: self.subst(s).replace('#', Dir('#').abspath + '/'), self['LIBPATH'])
+    libs = map(lambda s: str(self.subst(s)).replace('#', Dir('#').abspath + '/'), self['LIBPATH'])
     return ':'.join(libs)
 
 AddMethod(Environment, create_libpath, "CreateLibPath")
@@ -58,23 +67,28 @@ AddMethod(Environment, create_libpath, "CreateLibPath")
 ddenv['DD_DISTDIR'] = ddenv['DISTDIR'] + '/datadriven_cpp'
 ddenv['DD_OBJDIR'] = ddenv['OBJDIR'] + '/datadriven_cpp'
 
-# Set up DataDriven API dist directory
-ddenv.Append(LIBS = ['alljoyn_about'])
+ddenv.Append(LIBS = ['alljoyn_about', 'alljoyn', 'pthread'])
 
 # Add support for multiple build targets in the same work set.
-ddenv.VariantDir('$DD_OBJDIR/lib', 'src', duplicate = 0)
-ddenv.VariantDir('$DD_OBJDIR/samples', 'samples', duplicate = 0)
-ddenv.VariantDir('$DD_OBJDIR/unit_test', 'unit_test', duplicate = 0)
-ddenv.VariantDir('$DD_OBJDIR/test', 'test', duplicate = 0)
+if env['OS'] != 'android':
+    #don't build c++ code for android. Android language binding will be made on top of alljoyn-java
+    ddenv.VariantDir('$DD_OBJDIR/lib', 'src', duplicate = 0)
+    ddenv.VariantDir('$DD_OBJDIR/samples', 'samples', duplicate = 0)
+    ddenv.VariantDir('$DD_OBJDIR/unit_test', 'unit_test', duplicate = 0)
+    ddenv.VariantDir('$DD_OBJDIR/test', 'test', duplicate = 0)
 
 buildroot = ddenv.subst('build/${OS}/${CPU}/${VARIANT}')
 
 # Build and install DataDriven API C++ binding
 libs = ddenv.SConscript('$DD_OBJDIR/lib/SConscript', exports = {'env':ddenv})
 ddenv.Install('$DD_DISTDIR/lib', libs)
-ddenv.Install('$DD_DISTDIR/inc/datadriven', ddenv.Glob('inc/datadriven/*.h'))
-ddenv.Install('$DD_DISTDIR/inc/datadriven/posix', ddenv.Glob('inc/datadriven/posix/*.h'))
+ddapi_headers = ddenv.Install('$DD_DISTDIR/inc/datadriven', ddenv.Glob('inc/datadriven/*.h'))
 
+# Platform specifics for includes
+if env['OS_GROUP'] == 'windows':
+    ddenv.Install('$DD_DISTDIR/inc/datadriven/windows', ddenv.Glob('inc/datadriven/windows/*.h'))
+else:
+    ddenv.Install('$DD_DISTDIR/inc/datadriven/posix', ddenv.Glob('inc/datadriven/posix/*.h'))
 
 # Remove this condition when codegen supports ddcpp
 if from_alljoyn_core == 0:
@@ -89,6 +103,9 @@ if from_alljoyn_core == 0:
         tests = ddenv.SConscript('$DD_OBJDIR/test/SConscript', exports= {'env':ddenv})
 else:
     print 'Not building datadriven_api samples due to codegen incompatibility'
+
+# Build docs
+installDocs = ddenv.SConscript('docs/SConscript', exports = {'env':ddenv, 'headers':ddapi_headers})
 
 # Whitespace policy (only when we don't build from alljoyn)
 if from_alljoyn_core == 0:

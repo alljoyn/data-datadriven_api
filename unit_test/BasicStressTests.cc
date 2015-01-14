@@ -33,15 +33,15 @@ using namespace::test_unit_common;
  * */
 TEST(BasicStressTests, InvalidPropSig) {
     qcc::String invSig("-123xyzA///fjjj#$#$%^^&*&**");
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     unique_ptr<VarTestObject> vto;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
     ASSERT_TRUE(advertiser != nullptr);
 
     vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
 
     cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ERROR);
+    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
     vto->setPropSignature(invSig);
     vto->setPropObjPath("/valid");
@@ -60,15 +60,15 @@ TEST(BasicStressTests, InvalidPropSig) {
  * */
 TEST(BasicStressTests, InvalidObjectPath) {
     qcc::String invObP("!!!");
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     unique_ptr<VarTestObject> vto;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
     ASSERT_TRUE(advertiser != nullptr);
 
     vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
 
     cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ERROR);
+    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
     vto->setPropSignature("");
     vto->setPropObjPath(invObP);
@@ -86,9 +86,10 @@ TEST(BasicStressTests, InvalidObjectPath) {
  *       -# Attempt to call UpdateAll on the object and verify that this should fail.
  * */
 TEST(BasicStressTests, MassiveObjectSize) {
-    shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    // keep objects first, they should survive the advertiser
     unique_ptr<VarTestObject> validTestObject;
     unique_ptr<VarTestObject> vto;
+    shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
     ASSERT_TRUE(advertiser != nullptr);
 
@@ -111,7 +112,7 @@ TEST(BasicStressTests, MassiveObjectSize) {
     vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
 
     cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ERROR);
+    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
     qcc::String tmp(BIG_TEXT);
     while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
@@ -136,8 +137,8 @@ TEST(BasicStressTests, MassiveObjectSize) {
 TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
     int numPubObjs = 10;
     int stress = 1000;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     std::vector<unique_ptr<TestObject> > tos;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     qcc::String testObjName;
 
     ASSERT_TRUE(advertiser != nullptr);
@@ -158,7 +159,7 @@ TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
         tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
 
         cout << testObjName.c_str() << " Initial State is : " << tos.back()->GetState() << endl;
-        ASSERT_TRUE(tos.back()->GetState() != tos.back()->ERROR);
+        ASSERT_TRUE(tos.back()->GetState() != tos.back()->ST_ERROR);
         ASSERT_TRUE(tos.back()->UpdateAll() == ER_OK);
         testObjectListener.Wait();
     }
@@ -192,14 +193,14 @@ TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
  * will have an error state if the method failed due to marshalling reasons
  */
 TEST(BasicStressTests, MethodCallInvalidArgument) {
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     unique_ptr<TestObject> vto;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
     ASSERT_TRUE(advertiser != nullptr);
 
     vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
 
-    ASSERT_NE(vto->ERROR, vto->GetState());
+    ASSERT_NE(vto->ST_ERROR, vto->GetState());
     ASSERT_EQ(ER_OK, vto->UpdateAll());
 
     TestObjectListener testObjectListener;
@@ -240,8 +241,8 @@ TEST(BasicStressTests, MethodCallInvalidArgument) {
  *       and no marshaling of the data will be done, causing the test to fail.
  */
 TEST(BasicStressTests, SignalInvalidArgument) {
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     unique_ptr<TestObject> vto;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
     ASSERT_TRUE(advertiser != nullptr);
 
@@ -256,7 +257,7 @@ TEST(BasicStressTests, SignalInvalidArgument) {
 
     vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
 
-    ASSERT_NE(vto->ERROR, vto->GetState());
+    ASSERT_NE(vto->ST_ERROR, vto->GetState());
     ASSERT_EQ(ER_OK, vto->UpdateAll());
 
     testObjectListener.Wait();
