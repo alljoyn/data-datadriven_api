@@ -30,34 +30,6 @@ To get to know the DDAPI, here are some sources of information:
 The general installation process for the DDAPI is as follows:
 
 1. [Download][ajdl] and [Install][ajinst] AllJoyn Core.
-2. [Install][cginst] the AllJoyn Code Generator.
-3. Unpack the DDAPI tarball in the directory where you installed the AllJoyn Core files.
-4. Go to the directory `/data/datadriven_api/` and run the scons script.
-
-Read the rest of this document for more information.
-
-## Patch When Running On Top of AllJoyn Core 14.12 (ASACORE-1238)
-
-If you are building the DDAPI on top of AllJoyn Core 14.12, you need to run a patch. This issue is solved from AllJoyn Core release 14.12a onwards.
-
-You will get this error:
-.../build/linux/x86_64/debug/dist/cpp/inc/alljoyn/AutoPinger.h:31:23: fatal error: qcc/Timer.h: No such file or directory
-compilation terminated.
-
-The patch is located in the patches directory. Run it to patch the necessary files:
-
-% patch -Np1 -i ../alljoyn-ddapi-0.0.1-src/data/datadriven_api/patches/alljoyn_core_14.12_autopinger.patch
-patching file alljoyn_core/inc/alljoyn/AutoPinger.h
-patching file alljoyn_core/src/AutoPinger.cc
-patching file alljoyn_core/src/AutoPingerInternal.cc
-patching file alljoyn_core/src/AutoPingerInternal.h
-patching file alljoyn_core/unit_test/AutoPingerTest.cc
-
-## General Installation Process
-
-The general installation process for the DDAPI is as follows:
-
-1. [Download][ajdl] and [Install][ajinst] AllJoyn Core.
    If AllJoyn core is not installed globally on your system, set ALLJOYN_DISTDIR
    to the path where alljoyn is compiled. For Linux 64bit this is ${ALLJOYN_SRC_DIR}/build/linux/x86_64/debug/dist/
 2. [Install][cginst] the AllJoyn Code Generator.
