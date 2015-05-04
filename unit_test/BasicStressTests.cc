@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,8 @@
 
 #include "Common.h"
 
+#include <qcc/Thread.h>
+
 /**
  * Several basic stress tests.
  */
@@ -32,23 +34,26 @@ using namespace::test_unit_common;
  *       -# Attempt to call UpdateAll on the object and verify that this should fail.
  * */
 TEST(BasicStressTests, InvalidPropSig) {
-    qcc::String invSig("-123xyzA///fjjj#$#$%^^&*&**");
-    unique_ptr<VarTestObject> vto;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    {
+        qcc::String invSig("-123xyzA///fjjj#$#$%^^&*&**");
+        unique_ptr<VarTestObject> vto;
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
-    ASSERT_TRUE(advertiser != nullptr);
+        ASSERT_TRUE(advertiser != nullptr);
 
-    vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
+        vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
 
-    cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
+        cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
+        ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
-    vto->setPropSignature(invSig);
-    vto->setPropObjPath("/valid");
-    vto->setPropString("valid");
+        vto->setPropSignature(invSig);
+        vto->setPropObjPath("/valid");
+        vto->setPropString("valid");
 
-    ASSERT_TRUE(vto->UpdateAll() != ER_OK);
-    cout << "VarTestObject Final State is : " << vto->GetState() << endl;
+        ASSERT_TRUE(vto->UpdateAll() != ER_OK);
+        cout << "VarTestObject Final State is : " << vto->GetState() << endl;
+    }
+    qcc::Sleep(100);
 }
 
 /**
@@ -59,23 +64,26 @@ TEST(BasicStressTests, InvalidPropSig) {
  *       -# Attempt to call UpdateAll on the object and verify that this should fail.
  * */
 TEST(BasicStressTests, InvalidObjectPath) {
-    qcc::String invObP("!!!");
-    unique_ptr<VarTestObject> vto;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    {
+        qcc::String invObP("!!!");
+        unique_ptr<VarTestObject> vto;
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
-    ASSERT_TRUE(advertiser != nullptr);
+        ASSERT_TRUE(advertiser != nullptr);
 
-    vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
+        vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
 
-    cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
+        cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
+        ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
-    vto->setPropSignature("");
-    vto->setPropObjPath(invObP);
-    vto->setPropString("valid");
+        vto->setPropSignature("");
+        vto->setPropObjPath(invObP);
+        vto->setPropString("valid");
 
-    ASSERT_TRUE(vto->UpdateAll() != ER_OK);
-    cout << "VarTestObject Final State is : " << vto->GetState() << endl;
+        ASSERT_TRUE(vto->UpdateAll() != ER_OK);
+        cout << "VarTestObject Final State is : " << vto->GetState() << endl;
+    }
+    qcc::Sleep(100);
 }
 
 /**
@@ -86,45 +94,52 @@ TEST(BasicStressTests, InvalidObjectPath) {
  *       -# Attempt to call UpdateAll on the object and verify that this should fail.
  * */
 TEST(BasicStressTests, MassiveObjectSize) {
-    // keep objects first, they should survive the advertiser
-    unique_ptr<VarTestObject> validTestObject;
-    unique_ptr<VarTestObject> vto;
-    shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    {
+        VarTestObjectListener vtestObjectListener;
+        {
+            std::shared_ptr<Observer<VarTestObjectProxy> > obs = Observer<VarTestObjectProxy>::Create(
+                &vtestObjectListener);
+            {
+                // keep objects first, they should survive the advertiser
+                unique_ptr<VarTestObject> validTestObject;
+                unique_ptr<VarTestObject> vto;
+                shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+                ASSERT_TRUE(advertiser != nullptr);
+                ASSERT_TRUE(obs->GetStatus() == ER_OK);
 
-    ASSERT_TRUE(advertiser != nullptr);
+                //First make sure the consumer has at least received one valid object. That way we are sure that
+                //at least there is one consumer listening.
+                //The reasoning behind this is because the UpdateAll method will only fail due to an bad packet
+                //length IF it really needs to be sent -> if there are consumers listening.
+                validTestObject = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "ValidTestObject"));
+                validTestObject->setPropSignature("");
+                validTestObject->setPropObjPath("/valid");
+                validTestObject->setPropString("valid");
+                ASSERT_TRUE(validTestObject->UpdateAll() == ER_OK);
 
-    VarTestObjectListener vtestObjectListener;
-    std::shared_ptr<Observer<VarTestObjectProxy> > obs = Observer<VarTestObjectProxy>::Create(&vtestObjectListener);
+                vtestObjectListener.Wait();
 
-    ASSERT_TRUE(obs->GetStatus() == ER_OK);
+                vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
+                cerr << "VarTestObject Initial State is : " << vto->GetState() << endl;
+                ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
 
-    //First make sure the consumer has at least received one valid object. That way we are sure that
-    //at least there is one consumer listening.
-    //The reasoning behind this is because the UpdateAll method will only fail due to an bad packet
-    //length IF it really needs to be sent -> if there are consumers listening.
-    validTestObject = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "ValidTestObject"));
-    validTestObject->setPropSignature("");
-    validTestObject->setPropObjPath("/valid");
-    validTestObject->setPropString("valid");
-    ASSERT_TRUE(validTestObject->UpdateAll() == ER_OK);
-    vtestObjectListener.Wait();
+                qcc::String tmp(BIG_TEXT);
+                while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
+                    tmp.append(BIG_TEXT);
+                }
 
-    vto = unique_ptr<VarTestObject>(new VarTestObject(advertiser, "VarTestObject"));
+                vto->setPropSignature("");
+                vto->setPropObjPath("/valid");
+                vto->setPropString(tmp);
 
-    cout << "VarTestObject Initial State is : " << vto->GetState() << endl;
-    ASSERT_TRUE(vto->GetState() != vto->ST_ERROR);
-
-    qcc::String tmp(BIG_TEXT);
-    while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
-        tmp.append(BIG_TEXT);
+                ASSERT_TRUE(vto->UpdateAll() == ER_BUS_BAD_BODY_LEN);
+                cerr << "VarTestObject final State is : " << vto->GetState() << endl;
+            }
+            qcc::Sleep(100);
+            vtestObjectListener.nameToObjects.clear();
+        }
+        qcc::Sleep(100);
     }
-
-    vto->setPropSignature("");
-    vto->setPropObjPath("/valid");
-    vto->setPropString(tmp);
-
-    ASSERT_TRUE(vto->UpdateAll() == ER_BUS_BAD_BODY_LEN);
-    cout << "VarTestObject final State is : " << vto->GetState() << endl;
 }
 
 /**
@@ -134,58 +149,62 @@ TEST(BasicStressTests, MassiveObjectSize) {
  *       -# Verify that method calls on all published objects (as a consumer) and signaling (as a provider) at a high frequency is viable
  *       -# Verify successful listeners unregistration
  * */
-TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
-    int numPubObjs = 10;
-    int stress = 1000;
-    std::vector<unique_ptr<TestObject> > tos;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
-    qcc::String testObjName;
+// TODO : Should be enabled once ASACORE-1967 is fixed
+TEST(BasicStressTests, DISABLED_FrequentMethodCallsAndSignals) {
+    {
+        int numPubObjs = 10;
+        int stress = 1000;
+        std::vector<unique_ptr<TestObject> > tos;
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+        qcc::String testObjName;
 
-    ASSERT_TRUE(advertiser != nullptr);
+        ASSERT_TRUE(advertiser != nullptr);
 
-    TestObjectListener testObjectListener;
-    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
-        &testObjectListener);
+        TestObjectListener testObjectListener;
+        std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
+            &testObjectListener);
 
-    ASSERT_TRUE(obs->GetStatus() == ER_OK);
+        ASSERT_TRUE(obs->GetStatus() == ER_OK);
 
-    TestObjectSignalListener tosl;
-    ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+        TestObjectSignalListener tosl;
+        ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
 
-    for (int i = 0; i < numPubObjs; i++) {
-        char buffer[50];
-        snprintf(buffer, sizeof(buffer), "TestObject%d", i);
-        testObjName = qcc::String(buffer);
-        tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
+        for (int i = 0; i < numPubObjs; i++) {
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "TestObject%d", i);
+            testObjName = qcc::String(buffer);
+            tos.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
 
-        cout << testObjName.c_str() << " Initial State is : " << tos.back()->GetState() << endl;
-        ASSERT_TRUE(tos.back()->GetState() != tos.back()->ST_ERROR);
-        ASSERT_TRUE(tos.back()->UpdateAll() == ER_OK);
-        testObjectListener.Wait();
-    }
-
-    std::map<qcc::String, std::shared_ptr<SimpleTestObjectProxy> >::iterator it;
-    SimpleTestObjectProxy::ExecuteReply reply;
-    const qcc::String test_str(DEFAULT_TEST_NAME);
-    while (stress > 0) {
-        it = testObjectListener.nameToObjects.begin();
-        for (int i = 0; it != testObjectListener.nameToObjects.end(); ++it) {
-            std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteReply> > invocation(
-                it->second->Execute());
-            reply = invocation->GetReply();
-            EXPECT_TRUE(reply.GetStatus() == ER_OK);
-            EXPECT_TRUE(reply.success);
-
-            EXPECT_EQ(ER_OK, tos[i]->Test(test_str));
-
-            tosl.Wait();
-
-            ++i;
+            cout << testObjName.c_str() << " Initial State is : " << tos.back()->GetState() << endl;
+            ASSERT_TRUE(tos.back()->GetState() != tos.back()->ST_ERROR);
+            ASSERT_TRUE(tos.back()->UpdateAll() == ER_OK);
+            testObjectListener.Wait();
         }
-        --stress;
-    }
 
-    EXPECT_TRUE(obs->RemoveSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+        std::map<qcc::String, std::shared_ptr<SimpleTestObjectProxy> >::iterator it;
+        SimpleTestObjectProxy::ExecuteReply reply;
+        const qcc::String test_str(DEFAULT_TEST_NAME);
+        while (stress > 0) {
+            it = testObjectListener.nameToObjects.begin();
+            for (int i = 0; it != testObjectListener.nameToObjects.end(); ++it) {
+                std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteReply> > invocation(
+                    it->second->Execute());
+                reply = invocation->GetReply();
+                EXPECT_TRUE(reply.GetStatus() == ER_OK);
+                EXPECT_TRUE(reply.success);
+
+                EXPECT_EQ(ER_OK, tos[i]->Test(test_str));
+
+                tosl.Wait();
+
+                ++i;
+            }
+            --stress;
+        }
+
+        EXPECT_TRUE(obs->RemoveSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+    }
+    qcc::Sleep(100);
 }
 
 /**
@@ -193,43 +212,46 @@ TEST(BasicStressTests, FrequentMethodCallsAndSignals) {
  * will have an error state if the method failed due to marshalling reasons
  */
 TEST(BasicStressTests, MethodCallInvalidArgument) {
-    unique_ptr<TestObject> vto;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    {
+        unique_ptr<TestObject> vto;
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
-    ASSERT_TRUE(advertiser != nullptr);
+        ASSERT_TRUE(advertiser != nullptr);
 
-    vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
+        vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
 
-    ASSERT_NE(vto->ST_ERROR, vto->GetState());
-    ASSERT_EQ(ER_OK, vto->UpdateAll());
+        ASSERT_NE(vto->ST_ERROR, vto->GetState());
+        ASSERT_EQ(ER_OK, vto->UpdateAll());
 
-    TestObjectListener testObjectListener;
-    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
-        &testObjectListener);
-    TestObjectSignalListener tosl;
-    ASSERT_EQ(ER_OK, obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl));
-    testObjectListener.Wait();
+        TestObjectListener testObjectListener;
+        std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
+            &testObjectListener);
+        TestObjectSignalListener tosl;
+        ASSERT_EQ(ER_OK, obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl));
+        testObjectListener.Wait();
 
-    /* Make a very long string */
-    qcc::String tmp(BIG_TEXT);
-    while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
-        tmp.append(BIG_TEXT);
+        /* Make a very long string */
+        qcc::String tmp(BIG_TEXT);
+        while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
+            tmp.append(BIG_TEXT);
+        }
+
+        for (auto& it : testObjectListener.nameToObjects) {
+            /* Normal case */
+            std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteReply> > invocation(
+                it.second->Execute());
+            SimpleTestObjectProxy::ExecuteReply reply = invocation->GetReply();
+            EXPECT_EQ(ER_OK, reply.GetStatus());
+            EXPECT_TRUE(reply.success);
+
+            /* Fail case */
+            std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteWithArgReply> > invocation2(
+                it.second->ExecuteWithArg(tmp));
+            SimpleTestObjectProxy::ExecuteWithArgReply reply2 = invocation2->GetReply();
+            EXPECT_EQ(ER_BUS_BAD_BODY_LEN, reply2.GetStatus());
+        }
     }
-
-    for (auto& it : testObjectListener.nameToObjects) {
-        /* Normal case */
-        std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteReply> > invocation(
-            it.second->Execute());
-        SimpleTestObjectProxy::ExecuteReply reply = invocation->GetReply();
-        EXPECT_EQ(ER_OK, reply.GetStatus());
-        EXPECT_TRUE(reply.success);
-
-        /* Fail case */
-        std::shared_ptr<datadriven::MethodInvocation<SimpleTestObjectProxy::ExecuteWithArgReply> > invocation2(
-            it.second->ExecuteWithArg(tmp));
-        SimpleTestObjectProxy::ExecuteWithArgReply reply2 = invocation2->GetReply();
-        EXPECT_EQ(ER_BUS_BAD_BODY_LEN, reply2.GetStatus());
-    }
+    qcc::Sleep(100);
 }
 
 /**
@@ -241,34 +263,38 @@ TEST(BasicStressTests, MethodCallInvalidArgument) {
  *       and no marshaling of the data will be done, causing the test to fail.
  */
 TEST(BasicStressTests, SignalInvalidArgument) {
-    unique_ptr<TestObject> vto;
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    {
+        unique_ptr<TestObject> vto;
 
-    ASSERT_TRUE(advertiser != nullptr);
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
 
-    TestObjectListener testObjectListener;
-    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
-        &testObjectListener);
+        ASSERT_TRUE(advertiser != nullptr);
 
-    ASSERT_TRUE(obs->GetStatus() == ER_OK);
+        TestObjectListener testObjectListener;
+        std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
+            &testObjectListener);
 
-    TestObjectSignalListener tosl;
-    ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+        ASSERT_TRUE(obs->GetStatus() == ER_OK);
 
-    vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
+        TestObjectSignalListener tosl;
+        ASSERT_TRUE(obs->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
 
-    ASSERT_NE(vto->ST_ERROR, vto->GetState());
-    ASSERT_EQ(ER_OK, vto->UpdateAll());
+        vto = unique_ptr<TestObject>(new TestObject(advertiser, "TestObject"));
 
-    testObjectListener.Wait();
+        ASSERT_NE(vto->ST_ERROR, vto->GetState());
+        ASSERT_EQ(ER_OK, vto->UpdateAll());
 
-    /* Make a very long string */
-    qcc::String tmp(BIG_TEXT);
-    while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
-        tmp.append(BIG_TEXT);
+        testObjectListener.Wait();
+
+        /* Make a very long string */
+        qcc::String tmp(BIG_TEXT);
+        while (tmp.size() < (ajn::ALLJOYN_MAX_PACKET_LEN * 2)) {
+            tmp.append(BIG_TEXT);
+        }
+
+        ASSERT_EQ(ER_BUS_BAD_BODY_LEN, vto->Test(tmp));
     }
-
-    ASSERT_EQ(ER_BUS_BAD_BODY_LEN, vto->Test(tmp));
+    qcc::Sleep(100);
 }
 }
 //namespace

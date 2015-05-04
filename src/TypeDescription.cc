@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -138,7 +138,7 @@ QStatus TypeDescription::ResolveMembers(const ajn::InterfaceDescription& iface,
     cnt += signals.size();
     // keep references to actual members for later usage
     *member = NULL;
-    *member = new const ajn::InterfaceDescription::Member *[cnt];
+    *member = new const ajn::InterfaceDescription::Member*[cnt];
     if (NULL != *member) {
         int idx = 0;
 

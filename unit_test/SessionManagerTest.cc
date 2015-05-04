@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,8 +24,8 @@
 
 #include <gtest/gtest.h>
 
-#include <alljoyn/about/AboutServiceApi.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/AboutData.h>
 
 #include <datadriven/Semaphore.h>
 
@@ -50,7 +50,7 @@ class Provider :
     Provider(const char* busName,
              SessionPort port) :
         bus("Provider", true),
-        store()
+        aboutData("en")
     {
         cout << "Provider for " << busName << " on port " << port << endl;
         EXPECT_EQ(ER_OK, bus.Start());
@@ -67,9 +67,28 @@ class Provider :
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
         EXPECT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
         // about set up
-        about = new AboutService(bus, store);
+        about = new AboutObj(bus);
         EXPECT_TRUE(NULL != about);
-        about->Register(port);
+
+        uint8_t appId[] = { 0x53, 0x61, 0x79, 0x20,
+                            0x68, 0x65, 0x6c, 0x6c,
+                            0x6f, 0x20, 0x74, 0x6f,
+                            0x20, 0x51, 0x65, 0x6f };
+        aboutData.SetAppId(appId, 16);
+        aboutData.SetDeviceName("Session Manager Provider");
+        //DeviceId is a string encoded 128bit UUID
+        aboutData.SetDeviceId("2fd25710-ee7b-11e4-90ec-1681e6b88ec1");
+        aboutData.SetAppName("Session Manager Provider");
+        aboutData.SetManufacturer("QEO LLC");
+        aboutData.SetModelNumber("181180");
+        aboutData.SetDescription("Session Manager Provider");
+        aboutData.SetDateOfManufacture("2014-03-24");
+        aboutData.SetSoftwareVersion("1.0.0");
+        aboutData.SetHardwareVersion("1.0.0");
+        aboutData.SetSupportUrl("https://allseenalliance.org/developers/learn/ddapi");
+
+        EXPECT_TRUE(aboutData.IsValid());
+        about->Announce(port, aboutData);
     }
 
     ~Provider()
@@ -88,8 +107,8 @@ class Provider :
 
   private:
     BusAttachment bus;
-    AboutPropertyStoreImpl store;
-    AboutService* about;
+    AboutData aboutData;
+    AboutObj* about;
 };
 
 class SessionManagerTest :

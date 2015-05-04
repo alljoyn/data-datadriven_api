@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,6 @@
 #include <cassert>
 
 #include <alljoyn/AutoPinger.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
 
 #include "SessionManager.h"
 
@@ -26,10 +25,9 @@
 #define QCC_MODULE "DD_CONSUMER"
 
 #define PING_GROUP "DDAPI"
-#define PING_TIME 1
+#define PING_TIME 15
 
 using namespace ajn;
-using namespace ajn::services;
 using namespace datadriven;
 using namespace qcc;
 

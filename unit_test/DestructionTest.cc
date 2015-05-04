@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,6 +47,8 @@ TEST(Destruction, FirstScenario) {
     TestObjectListener stestObjectListener;
     std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(
         &stestObjectListener);
+
+    ASSERT_TRUE(obs != nullptr);
 
     ASSERT_TRUE(obs->GetStatus() == ER_OK);
 
@@ -106,7 +108,7 @@ TEST(Destruction, SecondScenario) {
  *       -# Remove all TestObjects from the bus and verify the state of their state
  * */
 
-TEST(Destruction, ThirdScenario) {
+TEST(Destruction, DISABLED_ThirdScenario_High) {
     vector<unique_ptr<TestObject> > tosBeforeConn;
     shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     vector<unique_ptr<TestObject> > tosAfterConn;
@@ -116,6 +118,81 @@ TEST(Destruction, ThirdScenario) {
     qcc::String testObjName;
     int numOfObjects = 100;
     int numOfObservers = 100;
+
+    QCC_DbgPrintf(("Number of Observers: %u", numOfObservers));
+    QCC_DbgPrintf(("Number of Objects per Observer: %u", 2 * numOfObjects));
+
+    TestObjectListener stestObjectListener(numOfObservers);
+    TestObjectSignalListener tosl;
+
+    ASSERT_TRUE(advertiser != nullptr);
+
+    for (int i = 0; i < numOfObservers; i++) {
+        vObservers.push_back(Observer<SimpleTestObjectProxy>::Create(&stestObjectListener));
+        ASSERT_TRUE(vObservers.back()->AddSignalListener<SimpleTestObjectProxy::Test>(tosl) == ER_OK);
+        ASSERT_TRUE(vObservers.back()->GetStatus() == ER_OK);
+    }
+
+    for (int i = 0; i < numOfObjects; i++) {
+        char buffer[10];
+        snprintf(buffer, sizeof(buffer), "%d", i);
+        qcc::String objectNumber(buffer);
+        testObjName = ("TestObjectBeforeConn" + objectNumber).c_str();
+        tosBeforeConn.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
+
+        testObjName = ("TestObjectAfterConn" + objectNumber).c_str();
+        tosAfterConn.push_back(unique_ptr<TestObject>(new TestObject(advertiser, testObjName)));
+
+        ASSERT_TRUE(tosBeforeConn.back()->UpdateAll() == ER_OK);
+        ASSERT_TRUE(tosAfterConn.back()->UpdateAll() == ER_OK);
+
+        tosBeforeConn.back()->Test(DEFAULT_TEST_NAME);
+        tosAfterConn.back()->Test(DEFAULT_TEST_NAME);
+    }
+
+    QCC_DbgPrintf(("Wait until all objects are created"));
+    // WaitOnAllUpdates uses a vector of all names (including doubles)
+    stestObjectListener.WaitOnAllUpdates(numOfObjects * 2 * numOfObservers);
+
+    for (int i = 0; i < numOfObjects; i++) {
+        ASSERT_TRUE(tosBeforeConn[i]->GetState() != tosBeforeConn[i]->ST_ERROR);
+        tosBeforeConn[i]->RemoveFromBus();
+        ASSERT_TRUE(tosBeforeConn[i]->GetState() == tosBeforeConn[i]->ST_REMOVED);
+        QCC_DbgPrintf(("Removed : %s", tosBeforeConn[i]->GetPath()));
+
+        ASSERT_TRUE(tosAfterConn[i]->GetState() != tosAfterConn[i]->ST_ERROR);
+        tosAfterConn[i]->RemoveFromBus();
+        ASSERT_TRUE(tosAfterConn[i]->GetState() == tosAfterConn[i]->ST_REMOVED);
+        QCC_DbgPrintf(("Removed : %s", tosAfterConn[i]->GetPath()));
+    }
+
+    QCC_DbgPrintf(("Wait until all objects are removed"));
+    // WaitOnRemove uses a vector of all names (including doubles)
+    stestObjectListener.WaitOnRemove(numOfObjects * 2 * numOfObservers);
+}
+/* *
+ * \test Verify that the removal of several objects from the bus -regardless whether they were declared before or after the BusConnection- works.
+ *       Several observers are involved.
+ *       Steps:
+ *       -# Create a vector of unique pointers to TestObjects before the BusConnection creation
+ *       -# Create a BusConnection
+ *       -# Create a vector of unique pointers to TestObjects after the BusConnection creation
+ *       -# Create a vector of unique pointers to observers
+ *       -# Fill in the vector of unique pointers to observes with new observer objects with TestObjectlistener and TestObjectSignalListener
+ *       -# Assign new TestObjects to the the aforementioned vectors of unique pointers to TestObjects and invoke UpdateAll and issue signal "Test" on all
+ *       -# Remove all TestObjects from the bus and verify the state of their state
+ * */
+
+TEST(Destruction, ThirdScenario_Low) {
+    vector<unique_ptr<TestObject> > tosBeforeConn;
+    shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
+    vector<unique_ptr<TestObject> > tosAfterConn;
+
+    vector <std::shared_ptr<Observer<SimpleTestObjectProxy> > > vObservers;
+
+    qcc::String testObjName;
+    int numOfObjects = 10;
+    int numOfObservers = 10;
 
     QCC_DbgPrintf(("Number of Observers: %u", numOfObservers));
     QCC_DbgPrintf(("Number of Objects per Observer: %u", 2 * numOfObjects));

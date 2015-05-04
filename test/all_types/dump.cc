@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -277,11 +277,10 @@ template <> void dump<AllDictionariesProxy::SignalWithAllDictionaries>(const str
     dump(prefix + "arg_dict", swad.arg_dict);
 }
 
-template <> void dump<AllDictionariesProxy::MethodWithAllDictionariesInAndOutReply>(
-    const string& prefix,
-    const AllDictionariesProxy::
-    MethodWithAllDictionariesInAndOutReply
-    & reply)
+template <> void dump<AllDictionariesProxy::MethodWithAllDictionariesInAndOutReply>(const string& prefix,
+                                                                                    const AllDictionariesProxy::
+                                                                                    MethodWithAllDictionariesInAndOutReply
+                                                                                    & reply)
 {
     dump(prefix + "arg_out_boolean", reply.arg_out_boolean);
     dump(prefix + "arg_out_byte", reply.arg_out_byte);

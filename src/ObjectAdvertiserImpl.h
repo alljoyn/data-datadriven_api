@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,11 +24,15 @@
 
 #include <qcc/String.h>
 #include <datadriven/Mutex.h>
+#include <datadriven/ObjectAdvertiser.h>
 
 #include <alljoyn/version.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/AllJoynStd.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/AboutData.h>
+#include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/BusObject.h>
 
 #include "BusConnectionImpl.h"
 #include "common/AsyncTaskQueue.h"
@@ -48,7 +52,10 @@ class ObjectAdvertiserImpl :
     private AsyncTask, ajn::SessionPortListener {
   public:
     ObjectAdvertiserImpl(ajn::BusAttachment* bus,
-                         ajn::services::AboutPropertyStoreImpl* aboutPropertyStore = NULL);
+                         ajn::AboutData* aboutData = nullptr,
+                         ajn::AboutObj* = nullptr,
+                         ajn::SessionOpts* opts = nullptr,
+                         ajn::SessionPort sp = DATADRIVEN_SERVICE_PORT);
     virtual ~ObjectAdvertiserImpl();
 
     ajn::BusAttachment& GetBusAttachment() const;
@@ -82,24 +89,20 @@ class ObjectAdvertiserImpl :
     /** Set of provided objects advertised by this advertiser */
     std::set<std::weak_ptr<ProvidedObjectImpl>, std::owner_less<std::weak_ptr<ProvidedObjectImpl> > > providers;
 
-    /* Mutex to protect AboutService internals */
+    /* Mutex to protect AboutObj internals */
     mutable datadriven::Mutex aboutMutex;
 
     std::shared_ptr<BusConnectionImpl> busConnection;
     QStatus errorStatus;
 
-    ajn::services::AboutPropertyStoreImpl* aboutPropertyStore;
-    bool ownAboutPropertyStore;
+    ajn::AboutData* aboutData;
+    ajn::AboutObj* aboutObj;
+    ajn::SessionOpts* opts;
+    bool ownAboutLogic;
 
-    QStatus AboutUpdate(const std::shared_ptr<ajn::BusObject> busObject,
-                        const std::vector<qcc::String>& interfaceNames,
-                        bool add);
+    QStatus AdvertiseBusObject(std::shared_ptr<ajn::BusObject> busObject);
 
-    QStatus AdvertiseBusObject(std::shared_ptr<ajn::BusObject> busObject,
-                               const std::vector<qcc::String>& interfaceNames);
-
-    QStatus UnadvertiseBusObject(std::shared_ptr<ajn::BusObject> busObject,
-                                 const std::vector<qcc::String>& interfaceNames);
+    QStatus UnadvertiseBusObject(std::shared_ptr<ajn::BusObject> busObject);
 
     /* ajn::SessionPortListener */
     virtual bool AcceptSessionJoiner(ajn::SessionPort sessionPort,

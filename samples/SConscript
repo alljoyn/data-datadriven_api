@@ -18,13 +18,11 @@ appenv = env.Clone()
 appenv.Append(CPPPATH = ['generated'])
 appenv.Prepend(LIBS = ['alljoyn_ddapi'])
 
-# Use bundled router?
-if appenv['BR'] == 'on':
-    appenv.Append(LIBPATH = ['$ALLJOYN_DISTDIR' + '/cpp/lib'])
-    brobj = appenv.File('$ALLJOYN_DISTDIR' + '/cpp/lib/BundledRouter.o')
-    appenv.Prepend(LIBS = [brobj, 'ajrouter'])
-
 samples = []
+
+if appenv['BR'] == 'on':
+    # Build apps with bundled daemon support
+    appenv.Prepend(LIBS = [appenv['ajrlib']])
 
 for sample in appenv.Glob('*'):
     if sample.srcnode().isdir():

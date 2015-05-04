@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <vector>
+#include <map>
 
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
@@ -63,7 +64,7 @@ class ProvidedInterface;
  *       the first base class specified, followed by the xyzInterface classes.
  */
 
-class ProvidedObject  {
+class ProvidedObject {
   public:
     /*
      * The life cycle of a ProvidedObject
@@ -141,7 +142,7 @@ class ProvidedObject  {
      * \retval ER_OK on success
      * \retval others on failure
      */
-    QStatus AddProvidedInterface(ProvidedInterface * providedInterface,
+    QStatus AddProvidedInterface(ProvidedInterface* providedInterface,
                                  MethodCallbacks callbacks[],
                                  size_t numCallbacks);
 

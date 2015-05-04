@@ -27,16 +27,30 @@ PROVIDER_PID=0
 
 function test_interop()
 {
+    test_interop_ $1 $2 1
+    test_interop_ $1 $2 0
+}
+function test_interop_()
+{
     local consumer=$1
     local provider=$2
+    local do_sleep=$3
     local rc
 
     echo "Running interop test : ${consumer} consumer <-> ${provider} provider"
     ${DEBUG} "${INSTALL_ROOT}/${provider}_provider" &
     PROVIDER_PID=$!
+
+    if [ "1" = "${do_sleep}" ]; then
+        echo "Running ${consumer} consumer as a late joiner"
+        sleep 1
+    fi
+
     ${DEBUG} "${INSTALL_ROOT}/${consumer}_consumer"
     rc=$?
-    kill -9 ${PROVIDER_PID}
+    kill  ${PROVIDER_PID}
+    sleep 1
+    kill -9 ${PROVIDER_PID} || true
     if [ 0 -ne ${rc} ]; then
         echo "Exit code ${rc}"
         exit ${rc}

@@ -29,7 +29,7 @@ namespace datadriven {
  * implements GUID utilities
  * Generation, saving, exposing - 128 bit unique number
  */
-class GuidUtil  {
+class GuidUtil {
   public:
     /**
      * GetInstance

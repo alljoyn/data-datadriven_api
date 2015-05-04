@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@
 
 #include <datadriven/datadriven.h>
 #include <datadriven/Semaphore.h>
+#include <alljoyn/Init.h>
 
 #include "MethodsInterface.h"
 #include "MethodsProxy.h"
@@ -318,6 +319,16 @@ using namespace test_system_methods;
 
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+
     // only play provider if first command-line argument starts with a 'p'
     if (argc <= 1) {
         cout << "Usage: " << argv[0] << " <consumer|provider>" << endl;
@@ -328,5 +339,11 @@ int main(int argc, char** argv)
     } else {
         be_consumer();
     }
+
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+
     return 0;
 }

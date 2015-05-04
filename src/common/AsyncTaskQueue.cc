@@ -27,8 +27,8 @@ TaskData::~TaskData()
 }
 
 AsyncTaskQueue::AsyncTaskQueue(AsyncTask* asyncTask,
-                               bool ownersheap) :
-    m_IsStopping(true), m_AsyncTask(asyncTask), m_ownersheap(ownersheap)
+                               bool ownership) :
+    m_IsStopping(true), m_AsyncTask(asyncTask), m_ownership(ownership)
 {
 }
 
@@ -64,7 +64,7 @@ void AsyncTaskQueue::Start()
     InitializeConditionVariable(&m_QueueChanged);
     m_handle =
         reinterpret_cast<HANDLE>(_beginthreadex(NULL, 256 * 1024,
-                                                (unsigned int (__stdcall*)(void*))ReceiverThreadWrapper,
+                                                (unsigned int(__stdcall*)(void*))ReceiverThreadWrapper,
                                                 this, 0, NULL));
 #else
     pthread_mutex_init(&m_Lock, NULL);
@@ -84,7 +84,7 @@ void AsyncTaskQueue::Stop()
     while (!m_MessageQueue.empty()) {
         TaskData const* taskData = m_MessageQueue.front();
         m_MessageQueue.pop();
-        if (m_ownersheap) {
+        if (m_ownership) {
             delete taskData;
         }
     }
@@ -99,7 +99,7 @@ void AsyncTaskQueue::Stop()
     while (!m_MessageQueue.empty()) {
         TaskData const* taskData = m_MessageQueue.front();
         m_MessageQueue.pop();
-        if (m_ownersheap) {
+        if (m_ownership) {
             delete taskData;
         }
     }
@@ -132,7 +132,7 @@ void AsyncTaskQueue::Receiver()
             m_MessageQueue.pop();
             LeaveCriticalSection(&m_Lock);
             m_AsyncTask->OnTask(taskData);
-            if (m_ownersheap) {
+            if (m_ownership) {
                 delete taskData;
             }
             EnterCriticalSection(&m_Lock);
@@ -155,16 +155,15 @@ void AsyncTaskQueue::Receiver()
             m_MessageQueue.pop();
             pthread_mutex_unlock(&m_Lock);
             m_AsyncTask->OnTask(taskData);
-            if (m_ownersheap) {
+            if (m_ownership) {
                 delete taskData;
             }
             pthread_mutex_lock(&m_Lock);
         }
-        m_AsyncTask->OnEmptyQueue();
-
         // it's possible m_IsStopping changed while executing OnTask() (which is done unlocked)
         //  therefore we have to check it again here, otherwise we potentially deadlock here
         if (!m_IsStopping) {
+            m_AsyncTask->OnEmptyQueue();
             pthread_cond_wait(&m_QueueChanged, &m_Lock);
         }
     }

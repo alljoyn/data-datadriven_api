@@ -47,6 +47,13 @@ else:
     if gtest_dir != '/usr':
         unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
 
+    if unittest_env['BR'] == 'on':
+    # Build tests with bundled daemon support
+       unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
+    # Add private header include path to test bundled router code
+       unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
+       unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
+
 
     #we compile with no rtti and we are not using exceptions.
     unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])

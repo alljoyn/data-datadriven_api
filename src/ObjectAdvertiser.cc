@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,15 +18,19 @@
 #include "ObjectAdvertiserImpl.h"
 
 #include <qcc/Debug.h>
+
 #define QCC_MODULE "DD_PROVIDER"
 
 namespace datadriven {
 using namespace std;
 
 shared_ptr<ObjectAdvertiser> ObjectAdvertiser::Create(ajn::BusAttachment* ba,
-                                                      ajn::services::AboutPropertyStoreImpl* aboutPropertyStore)
+                                                      ajn::AboutData* aboutData,
+                                                      ajn::AboutObj* aboutObj,
+                                                      ajn::SessionOpts* opts,
+                                                      ajn::SessionPort sp)
 {
-    shared_ptr<ObjectAdvertiser> advertiser = shared_ptr<ObjectAdvertiser>(new ObjectAdvertiser(ba, aboutPropertyStore));
+    shared_ptr<ObjectAdvertiser> advertiser(new ObjectAdvertiser(ba, aboutData));
     if (nullptr != advertiser) {
         if (ER_OK != advertiser->objectAdvertiserImpl->GetStatus()) {
             advertiser = nullptr;
@@ -36,8 +40,11 @@ shared_ptr<ObjectAdvertiser> ObjectAdvertiser::Create(ajn::BusAttachment* ba,
 }
 
 ObjectAdvertiser::ObjectAdvertiser(ajn::BusAttachment* ba,
-                                   ajn::services::AboutPropertyStoreImpl* aboutPropertyStore) :
-    objectAdvertiserImpl(new ObjectAdvertiserImpl(ba, aboutPropertyStore))
+                                   ajn::AboutData* aboutData,
+                                   ajn::AboutObj* aboutObj,
+                                   ajn::SessionOpts* opts,
+                                   ajn::SessionPort sp) :
+    objectAdvertiserImpl(new ObjectAdvertiserImpl(ba, aboutData, aboutObj, opts, sp))
 {
 }
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014-2015, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,7 +112,8 @@ ObserverCache::NotificationSet ObserverCache::AddObject(const ObjectId& objId)
     if (aliveIterator != livingObjects.end()) {
         proxyObj = aliveIterator->second;
         QCC_DbgPrintf(("Update object @%s, path = '%s', session = %lu",
-                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
+                       (unsigned long)objId.GetSessionId()));
     } else {
         ObjectIdToWeakPtrMap::iterator deadIterator = deadObjects.find(objId);
         if (deadIterator != deadObjects.end()) {
@@ -175,7 +176,8 @@ ObserverCache::NotificationSet ObserverCache::RemoveObject(const ObjectId& objId
         snapshot.interface = proxyObj;
 
         QCC_DbgPrintf(("Remove object @%s, path = '%s', session = %lu",
-                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
+                       (unsigned long)objId.GetSessionId()));
     }
     mutex.Unlock();
     GarbageCollect();         /* TODO: not always trigger this */
@@ -220,7 +222,8 @@ std::shared_ptr<ProxyInterface> ObserverCache::UpdateObject(const ObjectId& objI
         }
     } else {
         QCC_DbgPrintf(("Failed to find object @%s, path = '%s', session = %lu",
-                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(), (unsigned long)objId.GetSessionId()));
+                       objId.GetBusName().c_str(), objId.GetBusObjectPath().c_str(),
+                       (unsigned long)objId.GetSessionId()));
     }
 
     return proxyObj;

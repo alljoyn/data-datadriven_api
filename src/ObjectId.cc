@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -64,9 +64,9 @@ ajn::ProxyBusObject ObjectId::MakeProxyBusObject() const
 std::ostream& operator<<(std::ostream& out, const ObjectId& objId)
 {
     out << "ObjectId(" <<
-    "bus:" << objId.GetBusName().c_str() <<
-    ",obj:" << objId.GetBusObjectPath().c_str() <<
-    ")";
+        "bus name:" << objId.GetBusName().c_str() <<
+        ", object path:" << objId.GetBusObjectPath().c_str() <<
+        ")";
     return out;
 }
 }

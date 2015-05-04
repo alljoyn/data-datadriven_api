@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,8 @@
 #include <map>
 #include <memory>
 
-#include <alljoyn/about/AnnounceHandler.h>
+#include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObjectDescription.h>
 
 #include <qcc/String.h>
 #include <datadriven/Mutex.h>
@@ -31,14 +32,13 @@
 
 namespace datadriven {
 class BusConnectionImpl;
-
 class ObserverManager :
-    private ajn::services::AnnounceHandler,
+    private ajn::AboutListener,
     private AsyncTask,
     private SessionManager::Listener {
   public:
     enum class Action :
-        int8_t {
+    int8_t {
         ADD, REMOVE
     };
 
@@ -106,7 +106,7 @@ class ObserverManager :
      * The map of discovered objects with Session class (contains busName and port) as the key and
      * the object descriptions as value
      */
-    typedef std::map<SessionManager::Session, ObjectDescriptions> ObjectDescriptionsMap;
+    typedef std::map<SessionManager::Session, ajn::AboutObjectDescription> ObjectDescriptionsMap;
     ObjectDescriptionsMap discoveredObjects;
 
     /**
@@ -142,22 +142,6 @@ class ObserverManager :
     mutable AsyncTaskQueue asyncTaskQueue;
 
     /**
-     * Register an new about announce handler for a given \a ifName
-     *
-     * \param ifName the interface name
-     * \return the status of the registration
-     */
-    QStatus AddAnnounceHandler(const qcc::String ifName);
-
-    /**
-     * Unregister an about announce handler for a given \a ifName
-     *
-     * \param ifName the interface name
-     * \return the status of the unregistration
-     */
-    QStatus RemoveAnnounceHandler(const qcc::String ifName);
-
-    /**
      * Add a new object (this method will enqueue a new async task object)
      *
      * \param ifName the interfaces of the object
@@ -185,19 +169,19 @@ class ObserverManager :
     /* Subtract B from A (so A-B) and call onChange for all interesting objects */
     void ObjectDescriptionsDifference(const qcc::String& busName,
                                       const ajn::SessionId& sessionId,
-                                      const ObjectDescriptions& odA,
-                                      const ObjectDescriptions& odB,
+                                      const ajn::AboutObjectDescription& odA,
+                                      const ajn::AboutObjectDescription& odB,
                                       Action action);
 
     /**
-     * Derived from ajn::services::AnnounceHandler
+     * Derived from ajn::AboutListener
      * Called when a new peer is announced on about
      */
-    virtual void Announce(unsigned short version,
-                          ajn::SessionPort port,
-                          const char* busName,
-                          const ObjectDescriptions& objectDescs,
-                          const AboutData& aboutData);
+    void Announced(const char* busName,
+                   uint16_t version,
+                   ajn::SessionPort port,
+                   const ajn::MsgArg& objectDescriptionArg,
+                   const ajn::MsgArg& aboutDataArg);
 
     /**
      * Derived from the SessionManagerListener

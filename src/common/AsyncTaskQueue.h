@@ -67,10 +67,10 @@ class AsyncTaskQueue {
     /**
      * AsyncTaskQueue constructor
      *  @param asyncTask - pointer to the class which callbacks will be called.
-     *  @param ownersheap - if true, the queue will delete the data after calling to callbacks.
+     *  @param ownership - if true, the queue will delete the data after calling to callbacks.
      */
     AsyncTaskQueue(AsyncTask* asyncTask,
-                   bool ownersheap = true);
+                   bool ownership = true);
     /**
      * AsyncTaskQueue destructor
      */
@@ -139,7 +139,7 @@ class AsyncTaskQueue {
     /**
      * is the thread is the owner of the objects in the queue and those will delete them.
      */
-    bool m_ownersheap;
+    bool m_ownership;
 };
 } //namespace datadriven
 

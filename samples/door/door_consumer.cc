@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include <datadriven/datadriven.h>
+#include <alljoyn/Init.h>
 
 #include "DoorProxy.h"
 
@@ -214,19 +215,39 @@ static bool parse(datadriven::Observer<DoorProxy>* observer, const string& input
     return true;
 }
 
+static void Finalize()
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+}
+
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
     MyDoorListener dl = MyDoorListener();
     shared_ptr<datadriven::Observer<DoorProxy> > observer = datadriven::Observer<DoorProxy>::Create(&dl);
 
     if (nullptr == observer) {
         cerr << "Observer not correctly initialized !!!" << endl;
-        return EXIT_FAILURE;
+        observer.reset();
+        Finalize();
     }
 
     MyDoorSignalListener myDoorSignalListener = MyDoorSignalListener();
     if (ER_OK != observer->AddSignalListener<DoorProxy::PersonPassedThrough>(myDoorSignalListener)) {
         cerr << "Could not add Signal Listener to the Observer !!!" << endl;
+        observer.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
@@ -245,5 +266,7 @@ int main(int argc, char** argv)
         result = EXIT_FAILURE;
     }
 
+    observer.reset();
+    Finalize();
     return result;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <datadriven/datadriven.h>
 #include "DoorInterface.h"
+#include <alljoyn/Init.h>
 
 using namespace std;
 using namespace gen::com_example;
@@ -167,17 +168,39 @@ static void help()
     cout << "h         show this help message" << endl;
 }
 
+static void Finalize()
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+}
+
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+
     shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create();
     if (nullptr == advertiser) {
         cerr << "Object advertiser not correctly initialized !!!" << endl;
+        advertiser.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
     /* parse command line arguments */
     if (argc == 1) {
         cerr << "Usage: " << argv[0] << " location1 [location2 [... [locationN] ...]]" << endl;
+        advertiser.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
@@ -200,6 +223,8 @@ int main(int argc, char** argv)
 
     if (g_doors.empty()) {
         cerr << "No doors available" << endl;
+        advertiser.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
@@ -267,5 +292,7 @@ int main(int argc, char** argv)
         }
     }
 
+    advertiser.reset();
+    Finalize();
     return EXIT_SUCCESS;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 
 #include <datadriven/datadriven.h>
 #include <datadriven/Semaphore.h>
+#include <alljoyn/Init.h>
 
 #include "DiscoveryInterface.h"
 #include "DiscoveryProxy.h"
@@ -59,7 +60,6 @@ class TestListener :
     Semaphore& sem;
 
   public:
-    shared_ptr<Observer<DiscoveryProxy> > obs;
     typedef std::set<std::shared_ptr<DiscoveryProxy> > ObjectSet;
     ObjectSet objects;
 
@@ -68,11 +68,6 @@ class TestListener :
     TestListener(Semaphore& _sem) :
         sem(_sem)
     {
-    }
-
-    void setObserver(shared_ptr<Observer<DiscoveryProxy> > obs)
-    {
-        this->obs = obs;
     }
 
     virtual void OnUpdate(const std::shared_ptr<DiscoveryProxy>& p)
@@ -109,51 +104,71 @@ enum ChildCmd {
 
 static int child(int fd)
 {
-    ChildCmd cc;
-    BusAttachment ba("test");
-    assert(ER_OK == ba.Start());
-    assert(ER_OK == ba.Connect());
-    std::shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create(&ba);
-    assert(nullptr != advertiser);
-    DiscoveryObject to(advertiser, getpid());
-
-    cout << "child start " << endl;
-    bool run = true;
-
-    while (run && read(fd, &cc, sizeof(cc))) {
-        switch (cc) {
-        case START:
-            assert(ER_OK == ba.Start());
-            break;
-
-        case CONNECT:
-            assert(ER_OK == ba.Connect());
-            break;
-
-        case STOP:
-            assert(ER_OK == ba.Stop());
-            break;
-
-        case DISCONNECT:
-            assert(ER_OK == ba.Disconnect());
-            break;
-
-        case UPDATE:
-            assert(ER_OK == to.UpdateAll());
-            break;
-
-        case REMOVE:
-            to.RemoveFromBus();
-            break;
-
-        case CLOSE:
-            close(fd);
-            run = false;
-            break;
-        }
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
     }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
 
-    cout << "child stop " << endl;
+    ChildCmd cc;
+    {
+        //Open brackets to make sure the busattachment goes out of scope before shutting down AllJoyn
+        BusAttachment ba("test");
+        assert(ER_OK == ba.Start());
+        assert(ER_OK == ba.Connect());
+        std::shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create(&ba);
+        assert(nullptr != advertiser);
+        DiscoveryObject to(advertiser, getpid());
+
+        cout << "child start " << endl;
+        bool run = true;
+
+        while (run && read(fd, &cc, sizeof(cc))) {
+            switch (cc) {
+            case START:
+                assert(ER_OK == ba.Start());
+                break;
+
+            case CONNECT:
+                assert(ER_OK == ba.Connect());
+                break;
+
+            case STOP:
+                assert(ER_OK == ba.Stop());
+                break;
+
+            case DISCONNECT:
+                assert(ER_OK == ba.Disconnect());
+                break;
+
+            case UPDATE:
+                assert(ER_OK == to.UpdateAll());
+                break;
+
+            case REMOVE:
+                to.RemoveFromBus();
+                break;
+
+            case CLOSE:
+                close(fd);
+                run = false;
+                break;
+            }
+        }
+
+        cout << "child stop " << endl;
+
+        advertiser.reset();
+        advertiser = nullptr;
+    }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 
     return 0;
 }
@@ -174,72 +189,89 @@ static void sendUpdate(vector<ChildData>& children)
 static int controller(vector<ChildData>& children)
 {
     int rc = 0;
-    Semaphore sem;
-
-    TestListener testObjectListener(sem);
-    shared_ptr<datadriven::Observer<DiscoveryProxy> > obs = datadriven::Observer<DiscoveryProxy>::Create(
-        &testObjectListener);
-    testObjectListener.setObserver(obs);
-    size_t numPubObjs = children.size();
-
-    sendUpdate(children);
-
-    cout << "wait for objects " << numPubObjs << endl;
-    for (size_t i = 0; i < numPubObjs; ++i) {
-        assert(ER_OK == sem.Wait());
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
     }
-
-    assert(testObjectListener.objects.size() == numPubObjs);
-
-    cout << "suspend children " << endl;
-    for (size_t i = 0; i < children.size(); ++i) {
-        if (kill(children[i].pid, SIGSTOP) < 0) {
-            perror("kill");
-        }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
     }
+#endif
+    {
+        Semaphore sem;
 
-    cout << "wait for removal" << endl;
-    for (size_t i = 0; i < numPubObjs; ++i) {
-        assert(ER_OK == sem.Wait());
-    }
+        TestListener testObjectListener(sem);
+        shared_ptr<datadriven::Observer<DiscoveryProxy> > obs = datadriven::Observer<DiscoveryProxy>::Create(
+            &testObjectListener);
+        size_t numPubObjs = children.size();
 
-    assert((size_t)0 == testObjectListener.objects.size());
+        sendUpdate(children);
 
-    cout << "resume children " << endl;
-    for (size_t i = 0; i < children.size(); ++i) {
-        if (kill(children[i].pid, SIGCONT) < 0) {
-            perror("kill");
-        }
-    }
-
-    cout << "wait for objects" << endl;
-    for (size_t i = 0; i < numPubObjs; ++i) {
-        assert(ER_OK == sem.Wait());
-    }
-
-    assert(testObjectListener.objects.size() == numPubObjs);
-
-    cout << "closing all children" << endl;
-    for (size_t i = 0; i < children.size(); ++i) {
-        int status;
-        ChildCmd cc = CLOSE;
-        assert(write(children[i].fd, &cc, sizeof(cc)) == sizeof(cc));
-
-        cout << "closing fd " << children[i].fd << endl;
-        if (close(children[i].fd) < 0) {
-            perror("close");
+        cout << "wait for objects " << numPubObjs << endl;
+        for (size_t i = 0; i < numPubObjs; ++i) {
+            assert(ER_OK == sem.Wait());
         }
 
-        cout << "wait for child " << children[i].pid << endl;
-        if (waitpid(children[i].pid, &status, 0) < 0) {
-            perror("waitpid");
-        }
-        cout << "child " << children[i].pid << " returned " << status << endl;
+        assert(testObjectListener.objects.size() == numPubObjs);
 
-        if (!(WIFEXITED(status))) {
-            rc = 1;
+        cout << "suspend children " << endl;
+        for (size_t i = 0; i < children.size(); ++i) {
+            if (kill(children[i].pid, SIGSTOP) < 0) {
+                perror("kill");
+            }
         }
+
+        cout << "wait for removal" << endl;
+        for (size_t i = 0; i < numPubObjs; ++i) {
+            assert(ER_OK == sem.Wait());
+        }
+
+        assert((size_t)0 == testObjectListener.objects.size());
+
+        cout << "resume children " << endl;
+        for (size_t i = 0; i < children.size(); ++i) {
+            if (kill(children[i].pid, SIGCONT) < 0) {
+                perror("kill");
+            }
+        }
+
+        cout << "wait for objects" << endl;
+        for (size_t i = 0; i < numPubObjs; ++i) {
+            assert(ER_OK == sem.Wait());
+        }
+
+        assert(testObjectListener.objects.size() == numPubObjs);
+
+        cout << "closing all children" << endl;
+        for (size_t i = 0; i < children.size(); ++i) {
+            int status;
+            ChildCmd cc = CLOSE;
+            assert(write(children[i].fd, &cc, sizeof(cc)) == sizeof(cc));
+
+            cout << "closing fd " << children[i].fd << endl;
+            if (close(children[i].fd) < 0) {
+                perror("close");
+            }
+
+            cout << "wait for child " << children[i].pid << endl;
+            if (waitpid(children[i].pid, &status, 0) < 0) {
+                perror("waitpid");
+            }
+            cout << "child " << children[i].pid << " returned " << status << endl;
+
+            if (!(WIFEXITED(status))) {
+                rc = 1;
+            }
+        }
+
+        obs.reset();
+        obs = nullptr;
     }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
 
     return rc;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -57,7 +57,7 @@ class TypeDescription {
     const qcc::String name;
 
     enum class EmitChangesSignal :
-        int8_t {
+    int8_t {
         NEVER,
         ALWAYS,
         INVALIDATES

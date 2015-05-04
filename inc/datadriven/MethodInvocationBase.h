@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -65,7 +65,7 @@ class MethodInvocationBase :
      * Move constructor.
      * \param inv Original object to be moved.
      */
-    MethodInvocationBase(MethodInvocationBase && inv);
+    MethodInvocationBase(MethodInvocationBase&& inv);
 
     /**
      * \brief Get the current state of the method invocation.

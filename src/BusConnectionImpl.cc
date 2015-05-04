@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,6 @@
 namespace datadriven {
 using namespace std;
 using namespace ajn;
-using namespace ajn::services;
 
 shared_ptr<BusConnectionImpl> BusConnectionImpl::GetInstance(BusAttachment* ba)
 {
@@ -73,6 +72,7 @@ BusConnectionImpl::~BusConnectionImpl()
         ba->Stop();
         ba->Join();
         delete ba;
+        ba = nullptr;
     }
 }
 

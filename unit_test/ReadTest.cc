@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -93,7 +93,8 @@ class TestReadListener :
  * \test The test aims at verifying we can iterate over objects from OnUpdate() and OnRemove()
  *
  * */
-TEST(IterateFromCallback, Default) {
+// TODO : Enable the test once ASACORE-1967 is fixed
+TEST(IterateFromCallback, DISABLED_Default) {
     unsigned int numPubObjs = 5; //Increase for stress testing
     shared_ptr<datadriven::ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     std::vector<unique_ptr<TestObject> > tos;
@@ -103,7 +104,8 @@ TEST(IterateFromCallback, Default) {
     ASSERT_TRUE(advertiser != nullptr);
 
     TestReadListener testObjectListener(sem, "hello world");
-    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(&testObjectListener);
+    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs =
+        Observer<SimpleTestObjectProxy>::Create(&testObjectListener);
     testObjectListener.SetObserver(obs.get());
 
     std::shared_ptr<Observer<ExtensionProxy> > extobs = Observer<ExtensionProxy>::Create(NULL);
@@ -167,7 +169,8 @@ TEST(IterateWhileRemoved, Default) {
     ASSERT_TRUE(advertiser != nullptr);
 
     TestIterateRemoveListener testObjectListener(sem);
-    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs = Observer<SimpleTestObjectProxy>::Create(&testObjectListener);
+    std::shared_ptr<Observer<SimpleTestObjectProxy> > obs =
+        Observer<SimpleTestObjectProxy>::Create(&testObjectListener);
 
     testObjName = "TestObject";
     TestObject to(advertiser, testObjName);

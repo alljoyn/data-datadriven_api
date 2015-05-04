@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,20 +21,20 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/ProxyBusObject.h>
 
-#include <alljoyn/about/AnnounceHandler.h>
-#include <alljoyn/about/AnnouncementRegistrar.h>
+#include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObjectDescription.h>
+#include <alljoyn/Init.h>
 
 #include "ConsumerBase.h"
 #include "data.h"
 
 using namespace std;
 using namespace ajn;
-using namespace services;
 
 namespace test_system_properties {
 class AJNPropertiesConsumer :
     public ConsumerBase,
-    private AnnounceHandler,
+    private ajn::AboutListener,
     private BusAttachment::JoinSessionAsyncCB,
     private ProxyBusObject::PropertiesChangedListener {
   public:
@@ -44,10 +44,9 @@ class AJNPropertiesConsumer :
         assert(ER_OK == bus.Start());
         assert(ER_OK == bus.Connect());
 
-        const char* interfaces[] = { IFACE };
-        assert(ER_OK == AnnouncementRegistrar::RegisterAnnounceHandler(bus, *this, interfaces,
-                                                                       sizeof(interfaces) / sizeof(interfaces[0])));
+        bus.RegisterAboutListener(*this);
         RegisterInterface();
+        bus.WhoImplements(NULL);
     }
 
     ~AJNPropertiesConsumer()
@@ -102,30 +101,39 @@ class AJNPropertiesConsumer :
     qcc::String objectPath;
     const InterfaceDescription* iface;
 
-    virtual void Announce(unsigned short version,
-                          unsigned short port,
-                          const char* busName,
-                          const ObjectDescriptions& objectDescs,
-                          const AboutData& aboutData)
+    virtual void Announced(const char* busName, uint16_t version,
+                           SessionPort port, const MsgArg& objectDescriptionArg,
+                           const MsgArg& aboutDataArg)
     {
+        QCC_UNUSED(version);
+        QCC_UNUSED(aboutDataArg);
+
+        ajn::AboutObjectDescription objDesc;
+        QStatus status = objDesc.CreateFromMsgArg(objectDescriptionArg);
+        assert(status == ER_OK);
+
         // ensure at least one object
-        assert(objectDescs.size() > 0);
+        size_t numPathsOd = objDesc.GetPaths(NULL, 0);
+        const char** pathsOd = new const char*[numPathsOd];
+        objDesc.GetPaths(pathsOd, numPathsOd);
+
+        assert(numPathsOd > 0);
+
         // get path of object matching our interface
-        for (AboutClient::ObjectDescriptions::const_iterator object = objectDescs.begin();
-             (0 == objectPath.length()) && (object != objectDescs.end());
-             ++object) {
-            vector<qcc::String> interfaces = object->second;
-            for (vector<qcc::String>::const_iterator iface = interfaces.begin(); iface != interfaces.end(); ++iface) {
-                if (*iface == IFACE) {
-                    objectPath = object->first;
-                    break;
-                }
-            }
-        }
+        size_t numPaths = objDesc.GetInterfacePaths(IFACE, NULL, 0);
+        const char** paths = new const char*[numPaths];
+        objDesc.GetInterfacePaths(IFACE, paths, numPaths);
+
+        assert(numPaths > 0);
+
+        objectPath = paths[0];
+
         // join session with peer
         if (remoteBusName != busName) {
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
-            assert(ER_OK == bus.JoinSessionAsync(busName, port, NULL, opts, this, NULL));
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false,
+                             SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
+            assert(
+                ER_OK == bus.JoinSessionAsync(busName, port, NULL, opts, this, NULL));
             remoteBusName = busName;
         }
     }
@@ -168,7 +176,8 @@ class AJNPropertiesConsumer :
         assert(ER_OK == tmp->AddProperty(PROP_ET, "i", PROP_ACCESS_RW));
         assert(ER_OK == tmp->AddPropertyAnnotation(PROP_ET, org::freedesktop::DBus::AnnotateEmitsChanged, "true"));
         assert(ER_OK == tmp->AddProperty(PROP_EI, "i", PROP_ACCESS_RW));
-        assert(ER_OK == tmp->AddPropertyAnnotation(PROP_EI, org::freedesktop::DBus::AnnotateEmitsChanged, "invalidates"));
+        assert(ER_OK ==
+               tmp->AddPropertyAnnotation(PROP_EI, org::freedesktop::DBus::AnnotateEmitsChanged, "invalidates"));
         assert(ER_OK == tmp->AddProperty(PROP_EF, "i", PROP_ACCESS_RW));
         assert(ER_OK == tmp->AddPropertyAnnotation(PROP_EF, org::freedesktop::DBus::AnnotateEmitsChanged, "false"));
         tmp->Activate();
@@ -181,8 +190,24 @@ using namespace test_system_properties;
 
 int main(int argc, char** argv)
 {
-    AJNPropertiesConsumer cons;
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+    {
+        AJNPropertiesConsumer cons;
 
-    cons.Test();
+        cons.Test();
+    }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+
     return 0;
 }

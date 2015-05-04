@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@
 
 #include <datadriven/datadriven.h>
 #include <datadriven/Semaphore.h>
+#include <alljoyn/Init.h>
 
 #include "PropertiesInterface.h"
 #include "data.h"
@@ -133,19 +134,37 @@ using namespace test_system_properties;
 
 int main(int argc, char** argv)
 {
-    shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create();
-    assert(nullptr != advertiser);
-
-    Properties p(advertiser);
-
-    /* signal existence of object */
-    cout << "Provider announcing object" << endl;
-    assert(ER_OK == p.UpdateAll());
-    assert(ER_OK == p.Properties::GetStatus());
-
-    cout << "Provider sleeping" << endl;
-    while (true) {
-        sleep(60);
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
     }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+    {
+        shared_ptr<datadriven::ObjectAdvertiser> advertiser = datadriven::ObjectAdvertiser::Create();
+        assert(nullptr != advertiser);
+
+        Properties p(advertiser);
+
+        /* signal existence of object */
+        cout << "Provider announcing object" << endl;
+        assert(ER_OK == p.UpdateAll());
+        assert(ER_OK == p.Properties::GetStatus());
+
+        cout << "Provider sleeping" << endl;
+        while (true) {
+            sleep(60);
+        }
+
+        advertiser.reset();
+        advertiser = nullptr;
+    }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
     return 0;
 }

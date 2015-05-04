@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,10 +21,13 @@
 
 #include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutData.h>
+#include <alljoyn/AboutObj.h>
 
 namespace datadriven {
 class ObjectAdvertiserImpl;
+
+static const int DATADRIVEN_SERVICE_PORT = 5001;
 
 /**
  * \class ObjectAdvertiser
@@ -41,21 +44,28 @@ class ObjectAdvertiser {
      * If no BusAttachment is provided, one will be created internally and connected
      * to the AllJoyn bus. If a BusAttachment is passed, it must already be connected
      * to the bus.
-     * If no aboutPropertyStore is provided, one will be created internally and used in
-     * About announcements. If an aboutPropertyStore is passed from the application,
-     * it will be used in DDAPI announcements.
+     * If one of the following: (AboutData, AboutObj, SessionOpts) is provided then all other
+     * objects must be provided as well. If none of the aforementioned objects is provided,
+     * then they will all be created internally (with banal about data).
      *
      * The ObjectAdvertiser takes no ownership of passed objects. It is up to the
      * application to release them when necessary.
      *
      * \param[in] bus The (optional) AllJoyn BusAttachment to be used for interactions with the bus.  If
      *                not provided one will be created.
-     * \param[in] aboutPropertyStore metadata on the application
+     * \param[in] aboutData (conditionally optional) metadata on the application
+     * \param[in] aboutObj (conditionally optional) about object used for announcements
+     * \param[in] opts (conditionally optional) session options used when binding
+     * \param[in] sp (conditionally optional) session port used when binding
+     *
      * \return the ObjectAdvertiser shared pointer or nullptr in case of an error
      *
      */
     static std::shared_ptr<ObjectAdvertiser> Create(ajn::BusAttachment* bus = nullptr,
-                                                    ajn::services::AboutPropertyStoreImpl* aboutPropertyStore = nullptr);
+                                                    ajn::AboutData* aboutData = nullptr,
+                                                    ajn::AboutObj* aboutObj = nullptr,
+                                                    ajn::SessionOpts* opts = nullptr,
+                                                    ajn::SessionPort sp = DATADRIVEN_SERVICE_PORT);
 
     /**
      * Destroys the advertiser and optionally disconnects from the AllJoyn bus.
@@ -69,7 +79,10 @@ class ObjectAdvertiser {
 
   private:
     ObjectAdvertiser(ajn::BusAttachment* bus = nullptr,
-                     ajn::services::AboutPropertyStoreImpl* aboutPropertyStore = nullptr);
+                     ajn::AboutData* aboutData = nullptr,
+                     ajn::AboutObj* aboutObj = nullptr,
+                     ajn::SessionOpts* opts = nullptr,
+                     ajn::SessionPort sp = DATADRIVEN_SERVICE_PORT);
 
     ObjectAdvertiser(const ObjectAdvertiser&);
 

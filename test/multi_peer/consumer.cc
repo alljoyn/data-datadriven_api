@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -114,9 +114,10 @@ void Consumer::OnUpdate(const shared_ptr<MultiPeerProxy>& mpp)
     int obj_id = mpp->GetProperties().id;
     cout << "Consumer " << consId << " receives object with id " << obj_id
          << " and path " << mpp->GetObjectId().GetBusObjectPath().c_str() << endl;
-    assert(objects.end() == objects.find(obj_id));
-    objects[obj_id] = mpp;
-    assert(ER_OK == objSync.Post());
+    if (objects.end() == objects.find(obj_id)) {
+        objects[obj_id] = mpp;
+        assert(ER_OK == objSync.Post());
+    }
 }
 
 void Consumer::Test(int numLoops)

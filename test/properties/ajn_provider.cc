@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,15 +22,14 @@
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/Session.h>
-
-#include <alljoyn/about/AboutServiceApi.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/Init.h>
+#include <qcc/Thread.h>
 
 #include "data.h"
 
 using namespace std;
 using namespace ajn;
-using namespace services;
 
 #define PATH "/AJNPropertiesProvider/1"
 #define SESSION_PORT 12345
@@ -43,7 +42,7 @@ class AJNPropertiesProvider :
     AJNPropertiesProvider() :
         BusObject(PATH),
         bus("AJNPropertiesProvider", true),
-        store(),
+        about(bus),
         iface(NULL),
         propReadOnly(INITIAL_RO),
         propReadWrite(INITIAL_RW),
@@ -57,23 +56,36 @@ class AJNPropertiesProvider :
         assert(ER_OK == bus.Connect());
         assert(ER_OK == bus.RequestName("test.system.properties.AJNPropertiesProvider",
                                         DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE));
-        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_PHYSICAL, TRANSPORT_ANY);
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         SessionPort port = SESSION_PORT;
         assert(ER_OK == bus.BindSessionPort(port, opts, *this));
         assert(ER_OK == bus.AdvertiseName(IFACE, TRANSPORT_ANY));
         // about set up
-        AboutServiceApi::Init(bus, store);
-        AboutServiceApi* about = AboutServiceApi::getInstance();
-        assert(NULL != about);
-        about->Register(SESSION_PORT);
-        bus.RegisterBusObject(*about);
-        std::vector<qcc::String> ifaces;
-        ifaces.push_back(IFACE);
-        about->AddObjectDescription(PATH, ifaces);
-        about->Announce();
+        AboutData aboutData("en");
+
+        uint8_t appId[] = { 0x53, 0x61, 0x79, 0x20,
+                            0x68, 0x65, 0x6c, 0x6c,
+                            0x6f, 0x20, 0x74, 0x6f,
+                            0x20, 0x51, 0x65, 0x6f };
+        aboutData.SetAppId(appId, 16);
+        aboutData.SetDeviceName("AJN Provider");
+        //DeviceId is a string encoded 128bit UUID
+        aboutData.SetDeviceId("2fd25710-ee7b-11e4-90ec-1681e6b88ec1");
+        aboutData.SetAppName("AJN Provider");
+        aboutData.SetManufacturer("QEO LLC");
+        aboutData.SetModelNumber("181180");
+        aboutData.SetDescription("AJN Provider");
+        aboutData.SetDateOfManufacture("2014-03-24");
+        aboutData.SetSoftwareVersion("1.0.0");
+        aboutData.SetHardwareVersion("1.0.0");
+        aboutData.SetSupportUrl("https://allseenalliance.org/developers/learn/ddapi");
+
+        assert(aboutData.IsValid());
         // object set up
-        BusObject::AddInterface(*iface);
-        bus.RegisterBusObject(*this);
+        assert(ER_OK == BusObject::AddInterface(*iface, ANNOUNCED));
+        assert(ER_OK == bus.RegisterBusObject(*this));
+        qcc::Sleep(200); //Give the consumer the chance to start up before sending the About signal.
+        assert(ER_OK == about.Announce(SESSION_PORT, aboutData));
     }
 
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
@@ -175,7 +187,7 @@ class AJNPropertiesProvider :
 
   private:
     BusAttachment bus;
-    AboutPropertyStoreImpl store;
+    AboutObj about;
     const InterfaceDescription* iface;
 
     int32_t propReadOnly;
@@ -195,7 +207,8 @@ class AJNPropertiesProvider :
         assert(ER_OK == tmp->AddProperty(PROP_ET, "i", PROP_ACCESS_RW));
         assert(ER_OK == tmp->AddPropertyAnnotation(PROP_ET, org::freedesktop::DBus::AnnotateEmitsChanged, "true"));
         assert(ER_OK == tmp->AddProperty(PROP_EI, "i", PROP_ACCESS_RW));
-        assert(ER_OK == tmp->AddPropertyAnnotation(PROP_EI, org::freedesktop::DBus::AnnotateEmitsChanged, "invalidates"));
+        assert(ER_OK ==
+               tmp->AddPropertyAnnotation(PROP_EI, org::freedesktop::DBus::AnnotateEmitsChanged, "invalidates"));
         assert(ER_OK == tmp->AddProperty(PROP_EF, "i", PROP_ACCESS_RW));
         assert(ER_OK == tmp->AddPropertyAnnotation(PROP_EF, org::freedesktop::DBus::AnnotateEmitsChanged, "false"));
         tmp->Activate();
@@ -208,11 +221,27 @@ using namespace test_system_properties;
 
 int main(int argc, char** argv)
 {
-    AJNPropertiesProvider prov;
-
-    cout << "Provider sleeping" << endl;
-    while (true) {
-        sleep(60);
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
     }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+    {
+        AJNPropertiesProvider prov;
+
+        cout << "Provider sleeping" << endl;
+        while (true) {
+            sleep(60);
+        }
+    }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+
     return 0;
 }

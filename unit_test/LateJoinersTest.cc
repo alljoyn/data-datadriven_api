@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,7 +55,7 @@ static void WaitOnUpdates(TestObjectListener& testObjectListener,
                           int numPubObjs)
 {
     qcc::String testObjName;
-    testObjectListener.WaitOnAllUpdates(numPubObjs, 5);
+    testObjectListener.WaitOnAllUpdates(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener.nameToObjects.size() == numPubObjs);
     for (int i = 0; i < numPubObjs; i++) {
         char buffer[50];
@@ -113,9 +113,9 @@ TEST(LateJoiners, PublishJoinRemoveJoin) {
     Remove(testObjects);
 
     //Check that both observers have seen the objects being removed
-    testObjectListener.WaitOnRemove(numPubObjs, 5);
+    testObjectListener.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener.removedObjectNames.size() == numPubObjs);
-    testObjectListener2.WaitOnRemove(numPubObjs, 5);
+    testObjectListener2.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener2.removedObjectNames.size() == numPubObjs);
 
     //A new late joiner should NOT receive any objects.
@@ -173,11 +173,11 @@ TEST(LateJoiners, JoinPublishJoinDestroyRemove) {
     Remove(testObjects);
 
     //Wait until all objects are removed
-    testObjectListener.WaitOnRemove(numPubObjs, 5);
+    testObjectListener.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener.removedObjectNames.size() == numPubObjs);
 
     //Check that the already destroyed observer does not receive anything
-    testObjectListener2.WaitOnRemove(numPubObjs, 5);
+    testObjectListener2.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener2.removedObjectNames.size() == 0);
 }
 
@@ -240,9 +240,9 @@ TEST(LateJoiners, JoinPublishJoinDestroyJoinRemove) {
     EXPECT_TRUE((int)testObjectListener3.removedObjectNames.size() == numPubObjs);
 
     //Check that the already destroyed observers do not receive anything
-    testObjectListener.WaitOnRemove(numPubObjs, 5);
+    testObjectListener.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener.removedObjectNames.size() == 0);
-    testObjectListener2.WaitOnRemove(numPubObjs, 5);
+    testObjectListener2.WaitOnRemove(numPubObjs, 10);
     EXPECT_TRUE((int)testObjectListener2.removedObjectNames.size() == 0);
 }
 }

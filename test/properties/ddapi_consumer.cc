@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 
 #include <datadriven/datadriven.h>
 #include <datadriven/Semaphore.h>
+#include <alljoyn/Init.h>
 
 #include "PropertiesProxy.h"
 #include "ConsumerBase.h"
@@ -44,6 +45,10 @@ class DDAPIPropertiesConsumer :
     ~DDAPIPropertiesConsumer()
     {
         proxy.reset();
+        proxy = nullptr;
+
+        observer.reset();
+        observer = nullptr;
     }
 
     virtual void WaitForPeer()
@@ -149,8 +154,24 @@ using namespace test_system_properties;
 
 int main(int argc, char** argv)
 {
-    DDAPIPropertiesConsumer cons;
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+    {
+        DDAPIPropertiesConsumer cons;
 
-    cons.Test();
+        cons.Test();
+    }
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+
     return 0;
 }

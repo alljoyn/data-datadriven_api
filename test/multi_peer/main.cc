@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include <datadriven/datadriven.h>
+#include <alljoyn/Init.h>
 
 #include "MultiPeerInterface.h"
 #include "consumer.h"
@@ -113,6 +114,7 @@ static void cleanup(int num_prov, int num_cons)
             kill(_pid[i], SIGTERM);
         }
     }
+    sleep(1);
     free(_pid);
 }
 
@@ -194,6 +196,16 @@ int main(int argc, char** argv)
     if (fork) {
         rc = fork_children(num_prov, num_cons, argc, argv);
     } else {
+        if (AllJoynInit() != ER_OK) {
+            return EXIT_FAILURE;
+        }
+#ifdef ROUTER
+        if (AllJoynRouterInit() != ER_OK) {
+            AllJoynShutdown();
+            return EXIT_FAILURE;
+        }
+#endif
+
         int id = atoi(&argv[1][1]);
         int num_obj = atoi(argv[idx + 2]);
 
@@ -212,6 +224,11 @@ int main(int argc, char** argv)
 
             delete cons;
         }
+
+#ifdef ROUTER
+        AllJoynRouterShutdown();
+#endif
+        AllJoynShutdown();
     }
     return rc;
 }

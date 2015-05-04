@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include <datadriven/datadriven.h>
+#include <alljoyn/Init.h>
 
 #include <ChatParticipantInterface.h>
 #include <ChatParticipantProxy.h>
@@ -73,11 +74,31 @@ class MessageListener :
     }
 };
 
+static void Finalize()
+{
+#ifdef ROUTER
+    AllJoynRouterShutdown();
+#endif
+    AllJoynShutdown();
+}
+
 int main(int argc, char** argv)
 {
+    if (AllJoynInit() != ER_OK) {
+        return EXIT_FAILURE;
+    }
+#ifdef ROUTER
+    if (AllJoynRouterInit() != ER_OK) {
+        AllJoynShutdown();
+        return EXIT_FAILURE;
+    }
+#endif
+
     shared_ptr<ObjectAdvertiser> advertiser = ObjectAdvertiser::Create();
     if (nullptr == advertiser) {
         cerr << "Bus Connection is not correctly initialized !!!" << endl;
+        advertiser.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
@@ -85,6 +106,9 @@ int main(int argc, char** argv)
     shared_ptr<Observer<ChatParticipantProxy> > observer = Observer<ChatParticipantProxy>::Create(&chatListener);
     if (nullptr == observer) {
         cerr << "Observer is not correctly initialized !!!" << endl;
+        advertiser.reset();
+        observer.reset();
+        Finalize();
         return EXIT_FAILURE;
     }
 
@@ -123,7 +147,9 @@ int main(int argc, char** argv)
         participant.NewMessage(input.c_str());
     }
 
-    //participant.RemoveFromBus();
+    advertiser.reset();
+    observer.reset();
 
-    return 0;
+    Finalize();
+    return EXIT_SUCCESS;
 }
