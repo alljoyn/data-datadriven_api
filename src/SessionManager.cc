@@ -22,6 +22,7 @@
 #include "SessionManager.h"
 
 #include <qcc/Debug.h>
+#include <qcc/Thread.h>
 #define QCC_MODULE "DD_CONSUMER"
 
 #define PING_GROUP "DDAPI"
@@ -126,6 +127,9 @@ bool SessionManager::GetSessionId(const qcc::String& uniqueBusName,
             // Add the new session, refcount = 1
             if (it == sessions.end()) {
                 sessions.push_back(session);
+                //Add sleep to make sure the first ping can succeed
+                //See ASACORE-1995
+                qcc::Sleep(500);
                 pingManager->AddDestination(PING_GROUP, uniqueBusName);
             } else {
                 Session* newSession = new Session(session);

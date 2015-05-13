@@ -55,13 +55,14 @@ fi
 # we are doing some magic here to run each test in its own process as we still have some issues to run them in one go (AS-207)
 echo "[[ Cleaning old Gtest results if any ]]"
 UNITTEST_ROOT="${OBJ_ROOT}/unit_test"
-
-if ! nm "${UNITTEST_ROOT}/ddtest" | grep BundledRouter &> /dev/null; then
-    if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
-         echo "alljoyn-daemon is active...running tests..."
-    else
-         echo "Please start an alljoyn-daemon to be able to run the tests !"
-         exit 1
+if [ "debug" = "${VARIANT}" ]; then
+    if ! nm "${UNITTEST_ROOT}/ddtest" | grep BundledRouter &> /dev/null; then
+        if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
+            echo "alljoyn-daemon is active...running tests..."
+        else
+            echo "Please start an alljoyn-daemon to be able to run the tests !"
+            exit 1
+        fi
     fi
 fi
 
