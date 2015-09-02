@@ -1,3 +1,8 @@
+**Deprecation Notice**
+The Data-Driven API project has been terminated and this code is no longer
+maintained. The last released version is R15.04, tagged in this repository as
+v15.04.
+
 # The Data-Driven API (DDAPI) for AllJoyn
 
 ## About the DDAPI
